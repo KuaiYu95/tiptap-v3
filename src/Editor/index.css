@@ -30,8 +30,7 @@
   background-color: var(--mui-palette-background-paper2);
 }
 
-.tiptap.ProseMirror blockquote::before,
-.tiptap.ProseMirror blockquote.is-empty::before {
+.tiptap.ProseMirror blockquote::after {
   position: absolute;
   bottom: 0;
   left: 0;

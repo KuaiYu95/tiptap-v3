@@ -4,8 +4,9 @@ import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyleKit } from '@tiptap/extension-text-style';
-import { CharacterCount } from '@tiptap/extensions';
+import { CharacterCount, Placeholder } from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
+import { PLACEHOLDER } from '../contants/placeholder';
 import { GetExtensionsProps } from '../type';
 import {
   BlockAttachmentExtension,
@@ -64,6 +65,23 @@ export const getExtensions = ({
     Subscript,
     Superscript,
     TextStyleKit,
+    Placeholder.configure({
+      emptyNodeClass: 'custom-placeholder-node',
+      showOnlyWhenEditable: true,
+      placeholder: ({ node, pos }) => {
+        const { type, attrs } = node
+        if (pos === 0) {
+          return PLACEHOLDER.default
+        }
+        if (type.name === 'heading') {
+          return PLACEHOLDER.heading[attrs.level as keyof typeof PLACEHOLDER.heading]
+        }
+        if (PLACEHOLDER[type.name as keyof typeof PLACEHOLDER]) {
+          return PLACEHOLDER[type.name as keyof typeof PLACEHOLDER] as string
+        }
+        return ''
+      },
+    }),
   ]
 
   if (!exclude?.includes('mention') && (mentionItems && mentionItems.length > 0 || onMentionFilter)) {
