@@ -353,6 +353,7 @@ export const InlineLinkExtension = Node.create<LinkOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
+    const title = HTMLAttributes.title || HTMLAttributes.href
     if (
       !this.options.isAllowedUri(HTMLAttributes.href, {
         defaultValidate: href => !!isAllowedUri(href, this.options.protocols),
@@ -360,10 +361,10 @@ export const InlineLinkExtension = Node.create<LinkOptions>({
         defaultProtocol: this.options.defaultProtocol,
       })
     ) {
-      return ['a', mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, href: '' })]
+      return ['a', mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, href: '' }), title]
     }
 
-    return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]
+    return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), title]
   },
 
   addCommands() {
@@ -586,7 +587,8 @@ export const BlockLinkExtension = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)]
+    const title = HTMLAttributes.title || HTMLAttributes.href
+    return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), title]
   },
 
   addCommands() {

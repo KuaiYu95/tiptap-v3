@@ -58,7 +58,7 @@ const Reader = () => {
         }, 100);
       })
     },
-    content: ""
+    content: ``
   });
 
   return <EditorThemeProvider>
