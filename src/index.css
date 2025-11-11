@@ -179,10 +179,11 @@
 .tiptap.ProseMirror ul[data-type='taskList'] li {
   align-items: flex-start;
   display: flex;
+  flex-direction: row;
 }
 
 .tiptap.ProseMirror ul[data-type='taskList'] li>label {
-  flex: 0 0 auto;
+  flex-shrink: 0;
   user-select: none;
   margin-right: 8px;
   height: 28px;
@@ -192,7 +193,7 @@
 }
 
 .tiptap.ProseMirror ul[data-type='taskList'] li>div {
-  flex: 1 1 auto;
+  flex-grow: 1;
 }
 
 .tiptap.ProseMirror ul[data-type='taskList'] li[data-checked='true']>div {

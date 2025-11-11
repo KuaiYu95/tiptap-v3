@@ -112,6 +112,8 @@ const Reader = () => {
         editor={editor}
         height={'500px'}
         value={mdContent}
+        splitMode={true}
+        placeholder='请输入内容'
         onUpload={onUpload}
         onAceChange={setMdContent}
       />
