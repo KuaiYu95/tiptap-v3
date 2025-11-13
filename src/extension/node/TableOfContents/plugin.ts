@@ -12,33 +12,15 @@ export const TableOfContentsPlugin = ({
   return new Plugin({
     key: new PluginKey('tableOfContent'),
 
-    appendTransaction(transactions, oldState, newState) {
-      // 若处于组合输入，完全避免在此事务中写入 id，交由扩展层异步生成
-      if ((newState as any).view?.composing ||
-        (typeof document !== 'undefined' && (document as any).composing) ||
-        (typeof window !== 'undefined' && (window as any).compositionState)) {
-        return null
-      }
-
-      // 检查是否有任何事务包含组合相关的变化
-      const hasCompositionChanges = transactions.some(tr =>
-        tr.getMeta('composition') ||
-        tr.getMeta('compositionend') ||
-        tr.getMeta('compositionstart')
-      )
-
-      if (hasCompositionChanges) {
-        return null
-      }
-
+    appendTransaction(transactions, _oldState, newState) {
       const tr = newState.tr
       let modified = false
 
-      if (transactions.some(transaction => transaction.docChanged) && !oldState.doc.eq(newState.doc)) {
+      if (transactions.some(transaction => transaction.docChanged)) {
         const existingIds: string[] = []
 
         newState.doc.descendants((node, pos) => {
-          const nodeId = node.attrs.id
+          const nodeId = node.attrs['data-toc-id']
 
           if (!anchorTypes.includes(node.type.name) || node.textContent.length === 0) {
             return
@@ -55,6 +37,7 @@ export const TableOfContentsPlugin = ({
 
             tr.setNodeMarkup(pos, undefined, {
               ...node.attrs,
+              'data-toc-id': id,
               id,
             })
 

@@ -1,4 +1,4 @@
-import type { GetTableOfContentIndexFunction, GetTableOfContentLevelFunction, TableOfContentDataItem } from './type'
+import type { GetTableOfContentIndexFunction, GetTableOfContentLevelFunction, TableOfContentDataItem } from './types'
 
 export const getLastHeadingOnLevel = (
   headings: TableOfContentDataItem[],

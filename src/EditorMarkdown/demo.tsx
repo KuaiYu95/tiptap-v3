@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import '../index.css';
 
 const Reader = () => {
-  const [mdContent, setMdContent] = useState('');
+  const [mdContent, setMdContent] = useState('![ss](/ss)');
 
   const onUpload: UploadFunction = async (file: File, onProgress?: (progress: { progress: number }) => void) => {
     return new Promise((resolve) => {
@@ -79,6 +79,9 @@ const Reader = () => {
       // editor.chain().focus().setContent(value, {
       //   contentType: 'markdown'
       // }).run()
+    },
+    onTocUpdate: (toc) => {
+      console.log('toc', toc)
     },
     content: mdContent
   });

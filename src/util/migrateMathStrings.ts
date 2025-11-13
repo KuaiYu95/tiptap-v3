@@ -99,9 +99,8 @@ export function createMathMigrateTransaction(editor: Editor, tr: Transaction) {
       })
       .sort((a, b) => b.start - a.start) // 从后往前排序
 
-    sortedMatches.forEach(({ match, start, end, type }) => {
+    sortedMatches.forEach(({ match, start, type }) => {
       const from = tr.mapping.map(pos + start)
-      const to = tr.mapping.map(pos + end)
 
       const $from = tr.doc.resolve(from)
       const parent = $from.parent
