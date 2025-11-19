@@ -17,6 +17,7 @@ export * from './Mathematics';
 export * from './Mention';
 export * from './Script';
 export * from './Table';
+export * from './TableHandler';
 export * from './TableOfContents';
 export * from './UploadProgress';
 export * from './VerticalAlign';

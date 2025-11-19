@@ -119,41 +119,7 @@ const Reader = () => {
         }, 100);
       })
     },
-    content: `<pre><code>$$ sflsa $$
-
-$fsjadl$</code></pre><p></p><p><span data-latex="x+y=1" data-type="inline-math"></span></p><div data-latex="ssss" data-type="block-math"></div><p></p><p>fadsjlfkas</p><div data-type="flow" data-code="C4Context
-    title System Context diagram for Internet Banking System
-    Enterprise_Boundary(b0, &quot;BankBoundary0&quot;) {
-        Person(customerA, &quot;Banking Customer A&quot;, &quot;A customer of the bank, with personal bank accounts.&quot;)
-        Person(customerB, &quot;Banking Customer B&quot;)
-        Person_Ext(customerC, &quot;Banking Customer C&quot;, &quot;desc&quot;)
-
-        Person(customerD, &quot;Banking Customer D&quot;, &quot;A customer of the bank, &lt;br/&gt; with personal bank accounts.&quot;)
-
-        System(SystemAA, &quot;Internet Banking System&quot;, &quot;Allows customers to view information about their bank accounts, and make payments.&quot;)
-
-        Enterprise_Boundary(b1, &quot;BankBoundary&quot;) {
-            SystemDb_Ext(SystemE, &quot;Mainframe Banking System&quot;, &quot;Stores all of the core banking information about customers, accounts, transactions, etc.&quot;)
-
-            System_Boundary(b2, &quot;BankBoundary2&quot;) {
-                System(SystemA, &quot;Banking System A&quot;)
-                System(SystemB, &quot;Banking System B&quot;, &quot;A system of the bank, with personal bank accounts. next line.&quot;)
-            }
-
-            System_Ext(SystemC, &quot;E-mail system&quot;, &quot;The internal Microsoft Exchange e-mail system.&quot;)
-            SystemDb(SystemD, &quot;Banking System D Database&quot;, &quot;A system of the bank, with personal bank accounts.&quot;)
-
-            Boundary(b3, &quot;BankBoundary3&quot;, &quot;boundary&quot;) {
-                SystemQueue(SystemF, &quot;Banking System F Queue&quot;, &quot;A system of the bank.&quot;)
-                SystemQueue_Ext(SystemG, &quot;Banking System G Queue&quot;, &quot;A system of the bank, with personal bank accounts.&quot;)
-            }
-        }
-    }
-
-    BiRel(customerA, SystemAA, &quot;Uses&quot;)
-    BiRel(SystemAA, SystemE, &quot;Uses&quot;)
-    Rel(SystemAA, SystemC, &quot;Sends e-mails&quot;, &quot;SMTP&quot;)
-    Rel(SystemC, customerA, &quot;Sends e-mails to&quot;)" data-width="100%" data-height="auto"></div><p>fsajdlkfjadsl</p>`
+    content: `<table style="min-width: 600px;"><colgroup><col style="min-width: 120px;"><col style="min-width: 120px;"><col style="min-width: 120px;"><col style="min-width: 120px;"><col style="min-width: 120px;"></colgroup><tbody><tr><th colspan="1" rowspan="1"><p>stop</p></th><th colspan="1" rowspan="1"><p><img src="https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg" width="138"></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th><th colspan="1" rowspan="1"><p></p></th></tr><tr><td colspan="1" rowspan="1"><p>Start</p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr><tr><td colspan="1" rowspan="1"><p>Latest</p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td><td colspan="1" rowspan="1"><p></p></td></tr></tbody></table><p></p>`
   });
 
   return <EditorThemeProvider mode='light'>
@@ -162,6 +128,7 @@ $fsjadl$</code></pre><p></p><p><span data-latex="x+y=1" data-type="inline-math">
       borderRadius: '10px',
       padding: '0 10px 10px',
       bgcolor: 'var(--mui-palette-background-default)',
+
     }}>
       <div style={{
         borderBottom: '1px solid #eee',

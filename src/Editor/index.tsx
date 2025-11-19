@@ -7,6 +7,7 @@ import CustomDragHandle from '../component/CustomDragHandle';
 
 // fix: https://github.com/ueberdosis/tiptap/issues/6785
 import 'core-js/actual/array/find-last';
+import { TableHandle } from '../extension/component/Table';
 
 const Editor = ({
   editor,
@@ -36,6 +37,8 @@ const Editor = ({
     <CustomBubbleMenu editor={editor} more={menuInBubbleMenu} />
     <CustomDragHandle editor={editor} more={menuInDragHandle} onTip={onTip} />
     <EditorContent editor={editor} />
+    <TableHandle editor={editor} />
+    {/* <TableSelectionOverlay editor={editor} /> */}
   </PhotoProvider>
 };
 

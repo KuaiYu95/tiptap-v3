@@ -1,6 +1,12 @@
 @import 'highlight.js/styles/atom-one-dark.css';
 @import 'katex/dist/katex.min.css';
 
+@import '_variables.css';
+@import '_keyframe-animations.css';
+
+@import 'prosemirror-table.css';
+@import 'table-node.css';
+
 :root {
   --mui-shape-borderRadius: 10px;
   --mui-spacing-unit: 8px;

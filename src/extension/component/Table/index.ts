@@ -1,7 +1,8 @@
-export { default as TableContextMenu } from './ContextMenu';
+// Table Handle Components
 export {
-  createTableContextMenuPlugin,
-  TableContextMenuPluginKey,
-  type TableContextMenuPluginState
-} from './TableContextMenuPlugin';
+  TableHandle, type TableHandleButtonProps, type TableHandleProps
+} from "./Handle/table-handle"
+export {
+  useTableHandlePosition, useTableHandlePositioning
+} from "./Handle/use-table-handle-positioning"
 

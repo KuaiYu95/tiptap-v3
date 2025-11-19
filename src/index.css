@@ -58,6 +58,10 @@
   margin-bottom: 0 !important;
 }
 
+.tiptap.ProseMirror table *:has(.column-resize-handle)>*:nth-last-child(2) {
+  margin-bottom: 0 !important;
+}
+
 .tiptap.ProseMirror p {
   line-height: var(--common-row-line-height);
   font-size: var(--common-row-font-size);
@@ -397,119 +401,6 @@
   background-color: var(--mui-palette-divider);
 }
 
-.tiptap.ProseMirror table {
-  border-collapse: separate;
-  border-spacing: 0;
-  text-indent: 0;
-  max-width: 100%;
-  table-layout: fixed;
-  overflow: hidden;
-  caption-side: top;
-  border-left: 1px dotted var(--mui-palette-divider);
-}
-
-.tiptap.ProseMirror table p {
-  font-size: 14px;
-  line-height: 24px;
-}
-
-.tiptap.ProseMirror table th *,
-.tiptap.ProseMirror table td * {
-  word-break: break-all;
-}
-
-/* 表格单元格基础样式 */
-.tiptap.ProseMirror table td,
-.tiptap.ProseMirror table th {
-  border: none;
-  border-bottom: 1px solid var(--mui-palette-divider);
-  border-right: 1px dotted var(--mui-palette-divider);
-  box-sizing: border-box;
-  padding: 12px 16px;
-  position: relative;
-  vertical-align: top;
-  transition: all 0.2s ease-in-out;
-}
-
-.tiptap.ProseMirror table tbody tr:first-child th,
-.tiptap.ProseMirror table tbody tr:first-child td {
-  border-top: 1px solid var(--mui-palette-divider);
-}
-
-.tiptap.ProseMirror table td>*,
-.tiptap.ProseMirror table th>* {
-  margin-bottom: 0;
-}
-
-/* 表格表头样式 */
-.tiptap.ProseMirror table th {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  text-align: left;
-}
-
-.tiptap.ProseMirror[contenteditable="true"] table .selectedCell * {
-  pointer-events: none;
-  user-select: none;
-}
-
-/* 表格选择状态 */
-.tiptap.ProseMirror[contenteditable="true"] table .selectedCell:after {
-  background-color: color-mix(in srgb, var(--mui-palette-primary-main) 12%, transparent);
-  content: '';
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  pointer-events: none;
-  position: absolute;
-  z-index: 2;
-}
-
-/* 表格列调整手柄 */
-.tiptap.ProseMirror[contenteditable="true"] table .column-resize-handle {
-  border-right: 2px dotted var(--mui-palette-primary-main);
-  bottom: -2px;
-  pointer-events: none;
-  position: absolute;
-  right: -2px;
-  top: 0;
-  width: 1px;
-  z-index: 3;
-  opacity: 0.6;
-  transition: all 0.2s ease-in-out;
-}
-
-.tiptap.ProseMirror.resize-cursor {
-  cursor: col-resize;
-}
-
-/* 表格包装器样式 */
-.tiptap.ProseMirror .tableWrapper {
-  width: 100%;
-  overflow-x: auto;
-  margin: 20px 0;
-}
-
-/* 表格滚动条样式 */
-.tiptap.ProseMirror .tableWrapper::-webkit-scrollbar {
-  height: 5px;
-  cursor: pointer;
-}
-
-.tiptap.ProseMirror .tableWrapper::-webkit-scrollbar-track {
-  background: var(--mui-palette-divider);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.tiptap.ProseMirror .tableWrapper::-webkit-scrollbar-thumb {
-  background: var(--mui-palette-text-disabled);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
 /* youtube */
 .tiptap.ProseMirror div[data-youtube-video] {
   cursor: move;
@@ -561,7 +452,6 @@
 
 /* placeholder */
 .tiptap.ProseMirror .cq-details[data-placeholder]::before,
-.tiptap.ProseMirror table *[data-placeholder]::before,
 .tiptap.ProseMirror li p[data-placeholder]::before {
   display: none;
 }
