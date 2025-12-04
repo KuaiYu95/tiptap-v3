@@ -4,7 +4,7 @@ import { hasMarksInSelection } from '@ctzhian/tiptap/util'
 import { Divider, Paper, Stack } from '@mui/material'
 import { Editor, useEditorState } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { ToolbarItem } from '../Toolbar'
 
 export interface CustomBubbleMenuProps {
@@ -13,6 +13,31 @@ export interface CustomBubbleMenuProps {
 }
 
 const CustomBubbleMenu = ({ editor, more }: CustomBubbleMenuProps) => {
+  // 跟踪编辑器是否已经完全初始化
+  const isInitializedRef = useRef(false)
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // 当编辑器挂载后，延迟一段时间标记为已初始化
+  useEffect(() => {
+    if (editor && editor.view) {
+      // 清除之前的定时器
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current)
+      }
+
+      // 延迟标记为已初始化，确保编辑器状态稳定
+      initTimeoutRef.current = setTimeout(() => {
+        isInitializedRef.current = true
+      }, 100)
+    }
+
+    return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current)
+      }
+    }
+  }, [editor])
+
   // const theme = useTheme()
 
   // const THEME_TEXT_COLOR = [
@@ -81,7 +106,36 @@ const CustomBubbleMenu = ({ editor, more }: CustomBubbleMenuProps) => {
       offset: 8,
       flip: true,
     }}
-    shouldShow={() => {
+    shouldShow={({ editor }) => {
+      // 确保编辑器已初始化
+      if (!editor || !editor.state || !editor.view) {
+        return false
+      }
+
+      // 如果编辑器还没有完全初始化，不显示
+      if (!isInitializedRef.current) {
+        return false
+      }
+
+      const { selection, doc } = editor.state
+
+      // 如果没有选中文本（选择为空或起始和结束位置相同），不显示
+      if (selection.empty || selection.from === selection.to) {
+        return false
+      }
+
+      // 检查选中的文本内容是否真的有意义（不是空白字符）
+      // 使用 textBetween 获取选中范围内的文本，排除空白字符
+      const selectedText = doc.textBetween(selection.from, selection.to, ' ', ' ')
+      if (!selectedText || selectedText.trim().length === 0) {
+        return false
+      }
+
+      // 如果文档为空（只有默认段落且无内容），不显示
+      if (editor.isEmpty) {
+        return false
+      }
+
       // 表格多选单元格时禁止弹出气泡菜单
       // if (editor.state.selection.constructor.name === '_CellSelection') {
       //   const cellSelection = editor.state.selection as any;
@@ -92,8 +146,9 @@ const CustomBubbleMenu = ({ editor, more }: CustomBubbleMenuProps) => {
       //     return cellSelection.$anchorCell.pos !== cellSelection.$headCell.pos;
       //   }
       // }
+
+      // 在某些特定节点类型时不显示
       if (
-        editor.state.selection.empty ||
         editor.isActive('image') ||
         editor.isActive('video') ||
         editor.isActive('audio') ||
@@ -113,6 +168,7 @@ const CustomBubbleMenu = ({ editor, more }: CustomBubbleMenuProps) => {
       ) {
         return false
       }
+
       return true
     }}
   >
