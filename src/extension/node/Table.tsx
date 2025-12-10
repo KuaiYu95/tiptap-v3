@@ -1,11 +1,93 @@
-// @ts-nocheck
-
 import { Extension } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import type { Node } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import { TableView } from '@tiptap/pm/tables';
 import { TableHandleExtension } from './TableHandler';
+
+// 表格相关常量
+const TABLE_CONSTANTS = {
+  DEFAULT_CELL_MIN_WIDTH: 100,
+  HANDLE_WIDTH: 5,
+  SHORTCUT_KEY: 'Mod-9',
+  DEFAULT_ROWS: 3,
+  DEFAULT_COLS: 4,
+} as const;
+
+// 表格单元格的通用属性定义
+const createCommonCellAttributes = (isHeader = false) => ({
+  bgcolor: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      return element.getAttribute('data-background-color') || element.style.backgroundColor;
+    },
+    renderHTML: (attributes: Record<string, any>) => {
+      if (isHeader) {
+        return {
+          'data-background-color': attributes.bgcolor,
+          style: `background-color: ${attributes.bgcolor}`,
+        };
+      } else {
+        return {
+          'data-background-color': attributes.bgcolor,
+          style: `background-color: ${attributes.bgcolor}`,
+        };
+      }
+    },
+  },
+  textAlign: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      return element.getAttribute('data-text-align') || element.style.textAlign;
+    },
+    renderHTML: (attributes: Record<string, any>) => {
+      if (!attributes.textAlign) return {};
+      return {
+        style: `text-align: ${attributes.textAlign}`,
+        'data-text-align': attributes.textAlign,
+      };
+    },
+  },
+  verticalAlign: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      return element.getAttribute('data-vertical-align') || element.style.verticalAlign;
+    },
+    renderHTML: (attributes: Record<string, any>) => {
+      if (!attributes.verticalAlign) return {};
+      return {
+        style: `vertical-align: ${attributes.verticalAlign}`,
+        'data-vertical-align': attributes.verticalAlign,
+      };
+    },
+  },
+  fontSize: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      return element.getAttribute('data-font-size') || element.style.fontSize;
+    },
+    renderHTML: (attributes: Record<string, any>) => {
+      if (!attributes.fontSize) return {};
+      return {
+        style: `font-size: ${attributes.fontSize}`,
+        'data-font-size': attributes.fontSize,
+      };
+    },
+  },
+  fontWeight: {
+    default: null,
+    parseHTML: (element: HTMLElement) => {
+      return element.getAttribute('data-font-weight') || element.style.fontWeight;
+    },
+    renderHTML: (attributes: Record<string, any>) => {
+      if (!attributes.fontWeight) return {};
+      return {
+        style: `font-weight: ${attributes.fontWeight}`,
+        'data-font-weight': attributes.fontWeight,
+      };
+    },
+  },
+});
 
 export const TableExtension = ({ editable }: { editable: boolean }) => [
   Table.extend({
@@ -95,7 +177,9 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
         }
 
         const cellMinWidth =
-          this.options.cellMinWidth < 100 ? 100 : this.options.cellMinWidth;
+          this.options.cellMinWidth < TABLE_CONSTANTS.DEFAULT_CELL_MIN_WIDTH
+            ? TABLE_CONSTANTS.DEFAULT_CELL_MIN_WIDTH
+            : this.options.cellMinWidth;
         return new TiptapTableView(node, cellMinWidth, HTMLAttributes);
       };
     },
@@ -106,13 +190,25 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
       const firstRow = node.content.firstChild;
       const colCount = firstRow ? firstRow.childCount : 0;
 
-      const style = `--default-cell-min-width: 100px; min-width: ${colCount * 100}px;`;
+      // 构建表格样式
+      const tableStyles = [
+        `--default-cell-min-width: ${TABLE_CONSTANTS.DEFAULT_CELL_MIN_WIDTH}px`,
+        `min-width: ${colCount * TABLE_CONSTANTS.DEFAULT_CELL_MIN_WIDTH}px`,
+      ];
+
+      // 合并现有样式
+      const existingStyle = HTMLAttributes.style;
+      const combinedStyle = existingStyle
+        ? `${existingStyle}; ${tableStyles.join('; ')}`
+        : tableStyles.join('; ');
+
       const attrs = {
         ...HTMLAttributes,
-        style: HTMLAttributes.style ? `${HTMLAttributes.style} ${style}` : style,
+        style: combinedStyle,
       };
 
-      const cols: any[] = [];
+      // 生成列定义
+      const cols: (string | Record<string, unknown>)[][] = [];
       for (let i = 0; i < colCount; i++) {
         cols.push(['col', {}]);
       }
@@ -122,7 +218,7 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
     addCommands() {
       return {
         ...this.parent?.(),
-        cancelSelection: () => ({ state, dispatch }) => {
+        cancelSelection: () => ({ state, dispatch }: any) => {
           if (dispatch) {
             const { selection } = state;
             const { $from } = selection;
@@ -154,12 +250,19 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
     },
     addKeyboardShortcuts() {
       return {
-        'Mod-9': () => this.editor.chain().insertTable({ rows: 3, cols: 4, withHeaderRow: false }).focus().run(),
+        [TABLE_CONSTANTS.SHORTCUT_KEY]: () => this.editor.chain()
+          .insertTable({
+            rows: TABLE_CONSTANTS.DEFAULT_ROWS,
+            cols: TABLE_CONSTANTS.DEFAULT_COLS,
+            withHeaderRow: false
+          })
+          .focus()
+          .run(),
       }
     },
   }).configure({
-    handleWidth: 5,
-    cellMinWidth: 100,
+    handleWidth: TABLE_CONSTANTS.HANDLE_WIDTH,
+    cellMinWidth: TABLE_CONSTANTS.DEFAULT_CELL_MIN_WIDTH,
     resizable: editable,
     lastColumnResizable: editable,
     allowTableNodeSelection: editable,
@@ -168,70 +271,7 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
     addAttributes() {
       return {
         ...this.parent?.(),
-        bgcolor: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-background-color') || element.style.backgroundColor;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            return {
-              'data-background-color': attributes.bgcolor,
-              style: `background-color: ${attributes.bgcolor}`,
-            };
-          },
-        },
-        textAlign: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-text-align') || element.style.textAlign;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.textAlign) return {};
-            return {
-              style: `text-align: ${attributes.textAlign}`,
-              'data-text-align': attributes.textAlign,
-            };
-          },
-        },
-        verticalAlign: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-vertical-align') || element.style.verticalAlign;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.verticalAlign) return {};
-            return {
-              style: `vertical-align: ${attributes.verticalAlign}`,
-              'data-vertical-align': attributes.verticalAlign,
-            };
-          },
-        },
-        fontSize: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-font-size') || element.style.fontSize;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.fontSize) return {};
-            return {
-              style: `font-size: ${attributes.fontSize}`,
-              'data-font-size': attributes.fontSize,
-            };
-          },
-        },
-        fontWeight: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-font-weight') || element.style.fontWeight;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.fontWeight) return {};
-            return {
-              style: `font-weight: ${attributes.fontWeight}`,
-              'data-font-weight': attributes.fontWeight,
-            };
-          },
-        },
+        ...createCommonCellAttributes(true),
       };
     },
   }).configure({
@@ -248,80 +288,21 @@ export const TableExtension = ({ editable }: { editable: boolean }) => [
     addAttributes() {
       return {
         ...this.parent?.(),
-        bgcolor: {
-          default: null,
-          parseHTML: (element: HTMLElement) => element.getAttribute('data-background-color') || element.style.backgroundColor,
-          renderHTML: (attributes: Record<string, any>) => ({
-            'data-background-color': attributes.bgcolor,
-            style: `background-color: ${attributes.bgcolor}`,
-          }),
-        },
-        textAlign: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-text-align') || element.style.textAlign;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.textAlign) return {};
-            return {
-              style: `text-align: ${attributes.textAlign}`,
-              'data-text-align': attributes.textAlign,
-            };
-          },
-        },
-        verticalAlign: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-vertical-align') || element.style.verticalAlign;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.verticalAlign) return {};
-            return {
-              style: `vertical-align: ${attributes.verticalAlign}`,
-              'data-vertical-align': attributes.verticalAlign,
-            };
-          },
-        },
-        fontSize: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-font-size') || element.style.fontSize;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.fontSize) return {};
-            return {
-              style: `font-size: ${attributes.fontSize}`,
-              'data-font-size': attributes.fontSize,
-            };
-          },
-        },
-        fontWeight: {
-          default: null,
-          parseHTML: (element: HTMLElement) => {
-            return element.getAttribute('data-font-weight') || element.style.fontWeight;
-          },
-          renderHTML: (attributes: Record<string, any>) => {
-            if (!attributes.fontWeight) return {};
-            return {
-              style: `font-weight: ${attributes.fontWeight}`,
-              'data-font-weight': attributes.fontWeight,
-            };
-          },
-        },
+        ...createCommonCellAttributes(false),
       };
     },
     addKeyboardShortcuts() {
       return {
         Tab: () => {
           if (this.editor.chain().goToNextCell().focus().run()) {
-            return this.editor.chain().cancelSelection().run()
+            return true;
           } else if (!this.editor.can().addRowAfter()) {
-            return false
+            return false;
           } else {
-            return this.editor.chain().addRowAfter().goToNextCell().cancelSelection().run()
+            return this.editor.chain().addRowAfter().goToNextCell().run();
           }
         },
-        'Shift-Tab': () => this.editor.chain().goToPreviousCell().cancelSelection().run(),
+        'Shift-Tab': () => this.editor.chain().goToPreviousCell().run(),
       };
     },
   }),

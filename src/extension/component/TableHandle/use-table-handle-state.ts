@@ -1,24 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Editor } from '@tiptap/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TableHandlesState } from '../../node/TableHandler/plugin';
 
 export interface UseTableHandleStateConfig {
-  /**
-   * The Tiptap editor instance. If omitted, the hook will use
-   * the context/editor from `useTiptapEditor`.
-   */
+  /** Tiptap 编辑器实例；未传则使用外部上下文中的 editor */
   editor?: Editor | null;
-  /**
-   * Initial state of the table handles
-   */
+  /** 手柄的初始状态 */
   initialState?: TableHandlesState | null;
-  /**
-   * Only update state when specific fields change
-   */
+  /** 仅在特定字段变动时触发更新 */
   watchFields?: (keyof TableHandlesState)[];
-  /**
-   * Callback when state changes
-   */
+  /** 状态变更回调 */
   onStateChange?: (state: TableHandlesState | null) => void;
 }
 

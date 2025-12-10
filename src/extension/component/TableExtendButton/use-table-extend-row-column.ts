@@ -30,9 +30,7 @@ const ORIENTATION_CONFIG = {
   },
 } as const;
 
-/**
- * Custom hook for positioning extend buttons using Floating UI React
- */
+/** 使用 Floating UI 定位扩展按钮的自定义 Hook */
 function useTableExtendRowColumnButtonPosition(
   orientation: Orientation,
   show: boolean,
@@ -50,7 +48,7 @@ function useTableExtendRowColumnButtonPosition(
           const floating = elements.floating;
           if (!floating) return;
 
-          // Apply size based on orientation
+          // 按方向同步尺寸
           const sizeValue = `${rects.reference[config.sizeProperty]}px`;
           floating.style[config.sizeProperty] = sizeValue;
         },
@@ -66,11 +64,10 @@ function useTableExtendRowColumnButtonPosition(
       return;
     }
 
-    // Create a virtual element that always returns the latest rect values
-    // This ensures autoUpdate can detect changes when scrolling
+    // 使用虚拟元素返回最新矩形，方便滚动时 autoUpdate 生效
     refs.setReference({
       getBoundingClientRect: () => {
-        // Always use the latest value from closure
+        // 始终取闭包里的最新值
         return referencePosTable || new DOMRect();
       },
     });
@@ -91,9 +88,7 @@ function useTableExtendRowColumnButtonPosition(
   );
 }
 
-/**
- * Hook for managing positioning of both row and column extend buttons
- */
+/** 管理行列扩展按钮位置的 Hook */
 export function useTableExtendRowColumnButtonsPositioning(
   showAddOrRemoveColumnsButton: boolean,
   showAddOrRemoveRowsButton: boolean,

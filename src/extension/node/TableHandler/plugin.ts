@@ -30,8 +30,8 @@ export type TableHandlesState = {
   showAddOrRemoveColumnsButton: boolean;
   referencePosCell?: DOMRect;
   referencePosTable: DOMRect;
-  referencePosLastRow?: DOMRect; // Position of last row for extend button
-  referencePosLastCol?: DOMRect; // Position of last column for extend button
+  referencePosLastRow?: DOMRect; // 扩展按钮使用的末行位置
+  referencePosLastCol?: DOMRect; // 扩展按钮使用的末列位置
   block: TiptapNode;
   blockPos: number;
   colIndex: number | undefined;
@@ -42,10 +42,13 @@ export type TableHandlesState = {
     originalIndex: number;
     mousePos: number;
     initialOffset: number;
-    originalCellSize?: { width: number; height: number }; // Preserve original cell size during drag
+    originalCellSize?: { width: number; height: number }; // 拖拽时保持初始单元格尺寸
   }
   | undefined;
   widgetContainer: HTMLElement | undefined;
+  // 缓存手柄元素的边界矩形，避免重复计算
+  _cachedHandleRects?: DOMRect[];
+  _cachedHandleRectsTime?: number;
 };
 
 function hideElements(selector: string, rootEl: Document | ShadowRoot) {
@@ -91,9 +94,9 @@ class TableHandleView implements PluginView {
       this.dropHandler as unknown as EventListener
     );
 
-    // Listen to scroll events to update handle positions when scrolling
+    // 监听滚动事件以更新手柄位置
     window.addEventListener('scroll', this.scrollHandler, true);
-    // Also listen to resize events
+    // 同时监听窗口尺寸变化
     window.addEventListener('resize', this.scrollHandler);
   }
 
@@ -149,30 +152,25 @@ class TableHandleView implements PluginView {
     if (this.menuFrozen || this.mouseState === 'selecting') return;
 
     const target = event.target;
-    // If target is not in editor, don't process - this prevents state from being cleared
-    // when dragging outside the editor, which is the key to preventing errors
+    // 鼠标不在编辑器内时不处理，避免拖拽出界导致状态被清空
     if (!isHTMLElement(target) || !this.editorView.dom.contains(target)) return;
 
-    // Check if mouse is over a table handle or extend button
+    // 判断是否悬停在手柄或扩展按钮上
     const isOverHandle = target.closest('.tiptap-table-handle-menu') !== null;
-    const isOverExtendButton = target.closest('.tiptap-table-extend-row-column-button') !== null;
+    const isOverExtendButton = target.closest(
+      '.tiptap-table-extend-row-column-button, .tiptap-table-add-button'
+    ) !== null;
 
-    // If mouse is over handle/button, keep showing them (don't hide)
+    // 悬停其上时保持显示
     if (isOverHandle || isOverExtendButton) {
       return;
     }
 
-    // Check if mouse is near handle/button elements (within reasonable distance)
-    const handleElements = Array.from(
-      this.editorView.root.querySelectorAll(
-        '.tiptap-table-handle-menu, .tiptap-table-extend-row-column-button'
-      )
-    );
+    // 检查鼠标是否在手柄或按钮附近，使用缓存优化性能
+    const handleRects = this._getCachedHandleRects();
     let isNearHandle = false;
-    for (const handleEl of handleElements) {
-      if (!isHTMLElement(handleEl)) continue;
-      const rect = handleEl.getBoundingClientRect();
-      // Expand the rect by 10px on all sides for easier mouse movement
+    for (const rect of handleRects) {
+      // 周围扩展 10px 容错便于移动
       const expandedRect = new DOMRect(
         rect.left - 10,
         rect.top - 10,
@@ -190,7 +188,7 @@ class TableHandleView implements PluginView {
       }
     }
 
-    // If near handle, don't process further to avoid flickering
+    // 靠近手柄时不继续处理，避免闪烁
     if (isNearHandle) {
       return;
     }
@@ -198,10 +196,40 @@ class TableHandleView implements PluginView {
     this._handleMouseMoveNow(event);
   };
 
+  // 获取缓存的手柄边界矩形，每100ms更新一次以提高性能
+  private _getCachedHandleRects(): DOMRect[] {
+    const now = Date.now();
+    if (
+      this.state?._cachedHandleRects &&
+      this.state._cachedHandleRectsTime &&
+      now - this.state._cachedHandleRectsTime < 100
+    ) {
+      return this.state._cachedHandleRects;
+    }
+
+    const handleElements = Array.from(
+      this.editorView.root.querySelectorAll(
+        '.tiptap-table-handle-menu, .tiptap-table-extend-row-column-button, .tiptap-table-add-button'
+      )
+    );
+
+    const rects = handleElements
+      .filter(isHTMLElement)
+      .map(el => el.getBoundingClientRect());
+
+    // 更新缓存
+    if (this.state) {
+      this.state._cachedHandleRects = rects;
+      this.state._cachedHandleRectsTime = now;
+    }
+
+    return rects;
+  }
+
   private hideHandles() {
     if (!this.state?.show) return;
 
-    // Don't hide handles during drag operations - preserve dragging state
+    // 拖拽进行中保持手柄显示，保留拖拽状态
     if (this.state.draggingState) return;
 
     this.state = {
@@ -221,7 +249,7 @@ class TableHandleView implements PluginView {
   private _handleMouseMoveNow(event: MouseEvent) {
     const around = domCellAround(event.target as Element);
 
-    // Hide handles while selecting inside a cell
+    // 在单元格内拖拽选区时隐藏手柄
     if (
       around?.type === 'cell' &&
       this.mouseState === 'down' &&
@@ -247,7 +275,7 @@ class TableHandleView implements PluginView {
     });
     if (!coords) return;
 
-    // Find the table node at this position
+    // 基于坐标解析当前所在的表格节点
     const $pos = this.editor.view.state.doc.resolve(coords.pos);
     let blockInfo: { node: TiptapNode; pos: number } | undefined;
     for (let d = $pos.depth; d >= 0; d--) {
@@ -270,7 +298,7 @@ class TableHandleView implements PluginView {
       | HTMLElement
       | undefined;
 
-    // Hovering around the table (outside cells)
+    // 悬停在表格外围（非单元格区域）
     if (around.type === 'wrapper') {
       const below =
         event.clientY >= tableRect.bottom - 1 &&
@@ -281,7 +309,7 @@ class TableHandleView implements PluginView {
       const cursorBeyondRightOrBottom =
         event.clientX > tableRect.right || event.clientY > tableRect.bottom;
 
-      // Calculate positions for extend buttons when hovering at edges
+      // 悬停在边缘时预先计算扩展按钮位置
       let referencePosLastRow: DOMRect | undefined;
       let referencePosLastCol: DOMRect | undefined;
 
@@ -333,6 +361,24 @@ class TableHandleView implements PluginView {
         }
       }
 
+      // 尝试根据鼠标 Y 找到最近的行，并使用该行的首个单元格尺寸作为句柄参考，避免整行/整表尺寸
+      let nearestRowIndex: number | undefined;
+      let nearestCellRect: DOMRect | undefined;
+      if (!cursorBeyondRightOrBottom && tbody) {
+        const rows = Array.from(tbody.children) as HTMLElement[];
+        let minDist = Number.POSITIVE_INFINITY;
+        rows.forEach((rowEl, idx) => {
+          const rowRect = rowEl.getBoundingClientRect();
+          const dist = Math.abs(event.clientY - (rowRect.top + rowRect.height / 2));
+          if (dist < minDist) {
+            minDist = dist;
+            nearestRowIndex = idx;
+            const firstCell = rowEl.children[0] as HTMLElement | undefined;
+            nearestCellRect = firstCell?.getBoundingClientRect() ?? rowRect;
+          }
+        });
+      }
+
       this.state = {
         ...this.state,
         show: true,
@@ -345,13 +391,13 @@ class TableHandleView implements PluginView {
         blockPos: blockInfo.pos,
         widgetContainer,
         colIndex: cursorBeyondRightOrBottom ? undefined : this.state?.colIndex,
-        rowIndex: cursorBeyondRightOrBottom ? undefined : this.state?.rowIndex,
+        rowIndex: cursorBeyondRightOrBottom ? undefined : nearestRowIndex ?? this.state?.rowIndex,
         referencePosCell: cursorBeyondRightOrBottom
           ? undefined
-          : this.state?.referencePosCell,
+          : nearestCellRect ?? this.state?.referencePosCell,
       };
     } else {
-      // Hovering over a cell
+      // 悬停在单元格上
       const cellPosition = getCellIndicesFromDOM(
         around.domNode as HTMLTableCellElement,
         blockInfo.node,
@@ -359,13 +405,48 @@ class TableHandleView implements PluginView {
       );
       if (!cellPosition) return;
 
-      const { rowIndex, colIndex } = cellPosition;
+      const tbodyEl = around.tbodyNode;
+      let { rowIndex, colIndex } = cellPosition;
+
+      // 如果单元格跨行，map 计算的 rowIndex 会指向起始行；这里用 DOM 行索引兜底，保证手柄定位在实际行
+      const trEl = safeClosest<HTMLTableRowElement>(around.domNode, 'tr');
+      if (tbodyEl && trEl) {
+        const domRowIndex = Array.from(tbodyEl.children).indexOf(trEl);
+        if (domRowIndex >= 0 && domRowIndex !== rowIndex) {
+          rowIndex = domRowIndex;
+        }
+      }
+
       const cellRect = (around.domNode as HTMLElement).getBoundingClientRect();
+      const map = TableMap.get(blockInfo.node);
+      const cellIndex = rowIndex * map.width + colIndex;
+      const cellOffset = map.map[cellIndex];
+      const rect = cellOffset !== undefined ? map.findCell(cellOffset) : null;
+
+      let effectiveCellRect = cellRect;
+
+      // 如果单元格跨行，按鼠标所在行拆分高度，句柄高度限定为单行高度
+      if (rect && rect.bottom - rect.top > 1) {
+        const span = rect.bottom - rect.top;
+        const unitHeight = cellRect.height / span;
+        const clampedY = clamp(event.clientY, cellRect.top, cellRect.bottom);
+        const rowOffset = Math.min(
+          span - 1,
+          Math.max(0, Math.floor((clampedY - cellRect.top) / unitHeight))
+        );
+        const rowTop = cellRect.top + unitHeight * rowOffset;
+
+        rowIndex = rect.top + rowOffset;
+        effectiveCellRect = new DOMRect(cellRect.x, rowTop, cellRect.width, unitHeight);
+      } else if (trEl) {
+        const trRect = trEl.getBoundingClientRect();
+        effectiveCellRect = new DOMRect(cellRect.x, trRect.y, cellRect.width, trRect.height);
+      }
       const lastRowIndex = blockInfo.node.content.childCount - 1;
       const lastColIndex =
         (blockInfo.node.content.firstChild?.content.childCount ?? 0) - 1;
 
-      // Skip update if same cell
+      // 与上次同一单元格则跳过
       if (
         this.state?.show &&
         this.tableId === blockInfo.node.attrs.id &&
@@ -375,23 +456,23 @@ class TableHandleView implements PluginView {
         return;
       }
 
-      // Calculate positions for extend buttons
+      // 计算扩展按钮位置
       let referencePosLastRow: DOMRect | undefined;
       let referencePosLastCol: DOMRect | undefined;
 
       if (rowIndex === lastRowIndex || colIndex === lastColIndex) {
         const tbody = this.tableElement?.querySelector('tbody');
         if (tbody) {
-          // Get last row position
+          // 记录末行位置
           if (rowIndex === lastRowIndex) {
             const lastRow = tbody.children[lastRowIndex] as HTMLElement | undefined;
             if (lastRow) {
               referencePosLastRow = lastRow.getBoundingClientRect();
             }
           }
-          // Get last column position
+          // 记录末列位置
           if (colIndex === lastColIndex) {
-            // Find the rightmost column by checking all rows
+            // 在所有行里取最右侧单元格
             let maxRight = 0;
             let lastColRect: DOMRect | null = null;
             for (let i = 0; i < tbody.children.length; i++) {
@@ -406,7 +487,7 @@ class TableHandleView implements PluginView {
               }
             }
             if (lastColRect) {
-              // Create a rect representing the entire last column
+              // 生成代表整列的矩形
               const firstRow = tbody.children[0] as HTMLElement | undefined;
               const lastRow = tbody.children[lastRowIndex] as HTMLElement | undefined;
               if (firstRow && lastRow) {
@@ -436,7 +517,7 @@ class TableHandleView implements PluginView {
         block: blockInfo.node,
         blockPos: blockInfo.pos,
         draggingState: undefined,
-        referencePosCell: cellRect,
+        referencePosCell: effectiveCellRect,
         colIndex,
         rowIndex,
         widgetContainer,
@@ -460,7 +541,7 @@ class TableHandleView implements PluginView {
       this.editorView.root
     );
 
-    // The mouse cursor coordinates, bounded to the table's bounding box.
+    // 将鼠标坐标限制在表格包围框内
     const {
       left: tableLeft,
       right: tableRight,
@@ -473,7 +554,7 @@ class TableHandleView implements PluginView {
       top: clamp(event.clientY, tableTop + 1, tableBottom - 1),
     };
 
-    // Gets the table cell element
+    // 获取所在位置的单元格元素
     const tableCellElements = this.editorView.root
       .elementsFromPoint(boundedMouseCoords.left, boundedMouseCoords.top)
       .filter((element) => element.tagName === 'TD' || element.tagName === 'TH');
@@ -494,7 +575,7 @@ class TableHandleView implements PluginView {
 
     const { rowIndex, colIndex } = cellPosition;
 
-    // Check what changed
+    // 判断被拖动的索引是否改变
     const oldIndex =
       this.state.draggingState.draggedCellOrientation === 'row'
         ? this.state.rowIndex
@@ -510,14 +591,14 @@ class TableHandleView implements PluginView {
         ? boundedMouseCoords.top
         : boundedMouseCoords.left;
 
-    // Check if anything needs updating
+    // 仅在单元格或鼠标位置变化时更新
     const cellChanged =
       this.state.rowIndex !== rowIndex || this.state.colIndex !== colIndex;
     const mousePosChanged = this.state.draggingState.mousePos !== mousePos;
 
     if (cellChanged || mousePosChanged) {
       const newCellRect = tableCellElement.getBoundingClientRect();
-      // Preserve original cell size during drag to prevent handle height changes
+      // 拖拽时保持初始单元格尺寸，避免手柄高度抖动
       const preservedCellRect = this.state.draggingState?.originalCellSize
         ? new DOMRect(
           newCellRect.x,
@@ -541,7 +622,7 @@ class TableHandleView implements PluginView {
       this.emitUpdate();
     }
 
-    // Dispatch decorations transaction if needed
+    // 如需刷新拖拽装饰则派发事务
     if (dispatchDecorationsTransaction) {
       this.editor.view.dispatch(
         this.editor.state.tr.setMeta(tableHandlePluginKey, true)
@@ -588,8 +669,7 @@ class TableHandleView implements PluginView {
     );
     if (!stateWithCellSel) return false;
 
-    // When mode is 'state', selectCellsByCoords returns EditorState
-    // Type assertion is safe here because we explicitly requested 'state' mode
+    // mode 为 state 时 selectCellsByCoords 返回 EditorState，这里的断言是安全的
     const editorState = stateWithCellSel as EditorState;
 
     const dispatch = (tr: Transaction) => this.editor.view.dispatch(tr);
@@ -639,7 +719,7 @@ class TableHandleView implements PluginView {
       return;
     }
 
-    // Check if table changed
+    // 检查表格是否已变更
     const blockChanged =
       this.state.block !== tableInfo.node ||
       this.state.blockPos !== tableInfo.pos;
@@ -655,11 +735,11 @@ class TableHandleView implements PluginView {
 
     const { height: rowCount, width: colCount } = TableMap.get(tableInfo.node);
 
-    // Calculate new indices
+    // 计算新的行列索引
     let newRowIndex = this.state.rowIndex;
     let newColIndex = this.state.colIndex;
 
-    // Clamp indices if rows/columns were deleted
+    // 若删除了行/列则裁剪索引
     if (newRowIndex !== undefined && newRowIndex >= rowCount) {
       newRowIndex = rowCount ? rowCount - 1 : undefined;
     }
@@ -674,7 +754,7 @@ class TableHandleView implements PluginView {
       );
     }
 
-    // Calculate new reference positions
+    // 计算新的参考位置信息
     let newReferencePosCell = this.state.referencePosCell;
     if (newRowIndex !== undefined && newColIndex !== undefined) {
       const rowEl = tableBody.children[newRowIndex];
@@ -682,7 +762,7 @@ class TableHandleView implements PluginView {
 
       if (cellEl) {
         const newCellRect = cellEl.getBoundingClientRect();
-        // Preserve original cell size during drag to prevent handle height changes
+        // 拖拽时保持最初的单元格尺寸，避免高度抖动
         if (this.state.draggingState?.originalCellSize) {
           newReferencePosCell = new DOMRect(
             newCellRect.x,
@@ -702,7 +782,7 @@ class TableHandleView implements PluginView {
 
     const newReferencePosTable = tableBody.getBoundingClientRect();
 
-    // Update last row/col positions if needed
+    // 如需显示扩展按钮则刷新末行末列位置
     let newReferencePosLastRow = this.state.referencePosLastRow;
     let newReferencePosLastCol = this.state.referencePosLastCol;
 
@@ -751,7 +831,7 @@ class TableHandleView implements PluginView {
       }
     }
 
-    // Check if anything changed
+    // 若任一关键数据变化则推送更新
     const indicesChanged =
       newRowIndex !== this.state.rowIndex || newColIndex !== this.state.colIndex;
     const refPosChanged =
@@ -777,9 +857,9 @@ class TableHandleView implements PluginView {
   }
 
   private scrollHandler = () => {
-    // When scrolling, update positions if handles are visible
+    // 滚动时若手柄可见则重新计算位置
     if (this.state?.show && this.tableElement?.isConnected) {
-      // Force update by recalculating positions
+      // 强制刷新定位
       this.updatePositions();
     }
   };
@@ -795,7 +875,7 @@ class TableHandleView implements PluginView {
 
     const newReferencePosTable = tableBody.getBoundingClientRect();
 
-    // Update cell position if we have row/col indices
+    // 若已有行列索引则同步单元格位置
     let newReferencePosCell = this.state.referencePosCell;
     if (
       this.state.rowIndex !== undefined &&
@@ -805,7 +885,7 @@ class TableHandleView implements PluginView {
       const cellEl = rowEl?.children[this.state.colIndex];
       if (cellEl) {
         const newCellRect = cellEl.getBoundingClientRect();
-        // Preserve original cell size during drag
+        // 拖拽时保留初始尺寸
         if (this.state.draggingState?.originalCellSize) {
           newReferencePosCell = new DOMRect(
             newCellRect.x,
@@ -819,7 +899,7 @@ class TableHandleView implements PluginView {
       }
     }
 
-    // Update last row/col positions if needed
+    // 如需显示扩展按钮则刷新末行末列位置
     let newReferencePosLastRow = this.state.referencePosLastRow;
     let newReferencePosLastCol = this.state.referencePosLastCol;
 
@@ -868,7 +948,7 @@ class TableHandleView implements PluginView {
       }
     }
 
-    // Check if positions actually changed (compare individual properties)
+    // 对比具体属性，确认位置是否发生变化
     const refPosChanged =
       !newReferencePosCell ||
       !this.state.referencePosCell ||
@@ -1003,9 +1083,7 @@ export function TableHandlePlugin(
           });
         }
 
-        // Return empty decorations if:
-        // - original index is same as new index (no change)
-        // - editor is not defined for some reason
+        // 若无变更或 editor 不存在，直接返回已有装饰
         if (newIndex === originalIndex || !editor) {
           return DecorationSet.create(state.doc, decorations);
         }
@@ -1025,9 +1103,7 @@ export function TableHandlePlugin(
               return;
             }
 
-            // Creates a decoration at the start or end of each cell,
-            // depending on whether the new index is before or after the
-            // original index.
+            // 根据拖动方向在单元格首尾插入装饰
             const decorationPos =
               cell.pos + (newIndex > originalIndex ? cellNode.nodeSize - 2 : 2);
             decorations.push(
@@ -1039,11 +1115,7 @@ export function TableHandlePlugin(
                 widget.style.right = '0';
                 widget.style.zIndex = '20';
                 widget.style.pointerEvents = 'none';
-                // This is only necessary because the drop indicator's height
-                // is an even number of pixels, whereas the border between
-                // table cells is an odd number of pixels. So this makes the
-                // positioning slightly more consistent regardless of where
-                // the row is being dropped.
+                // 处理奇偶像素差，避免行插入指示线的视觉偏差
                 if (newIndex > originalIndex) {
                   widget.style.bottom = '-1px';
                 } else {
@@ -1067,9 +1139,7 @@ export function TableHandlePlugin(
             if (!cellNode) {
               return;
             }
-            // Creates a decoration at the start or end of each cell,
-            // depending on whether the new index is before or after the
-            // original index.
+            // 根据拖动方向在单元格首尾插入装饰
             const decorationPos =
               cell.pos + (newIndex > originalIndex ? cellNode.nodeSize - 2 : 2);
             decorations.push(
@@ -1081,11 +1151,7 @@ export function TableHandlePlugin(
                 widget.style.bottom = '0';
                 widget.style.zIndex = '20';
                 widget.style.pointerEvents = 'none';
-                // This is only necessary because the drop indicator's width
-                // is an even number of pixels, whereas the border between
-                // table cells is an odd number of pixels. So this makes the
-                // positioning slightly more consistent regardless of where
-                // the column is being dropped.
+                // 处理奇偶像素差，避免列插入指示线的视觉偏差
                 if (newIndex > originalIndex) {
                   widget.style.right = '-1px';
                 } else {
@@ -1105,9 +1171,7 @@ export function TableHandlePlugin(
   });
 }
 
-/**
- * Shared drag start handler for table rows and columns
- */
+/** 行/列通用的拖拽起始处理 */
 const tableDragStart = (
   orientation: 'col' | 'row',
   event: {
@@ -1117,11 +1181,11 @@ const tableDragStart = (
     clientY: number;
   }
 ) => {
-  // If state doesn't exist, try to recover from DOM or data attributes
+  // 若状态不存在，尝试从 DOM 或 data 属性恢复
   if (!tableHandleView?.state) {
     const handleElement = event.currentTarget as HTMLElement;
 
-    // Try to recover from data attributes first (set by React component)
+    // 优先使用组件写入的 data 属性恢复
     const dataIndex = handleElement.dataset.tableIndex;
     const dataTablePos = handleElement.dataset.tablePos;
     const dataTableId = handleElement.dataset.tableId;
@@ -1131,7 +1195,7 @@ const tableDragStart = (
       const blockPos = parseInt(dataTablePos, 10);
 
       if (!isNaN(index) && !isNaN(blockPos)) {
-        // Try to find the table node
+        // 尝试找到对应表格节点
         const tableNode = tableHandleView.editor.state.doc.nodeAt(blockPos);
         if (tableNode && isTableNode(tableNode)) {
           const tableWrapper = safeClosest<HTMLElement>(handleElement, '.tableWrapper');
@@ -1140,7 +1204,7 @@ const tableDragStart = (
           if (tbody) {
             const tableRect = tbody.getBoundingClientRect();
 
-            // Create minimal state for drag operation
+            // 构造最小拖拽状态
             const recoveredState: TableHandlesState = {
               show: true,
               showAddOrRemoveRowsButton: false,
@@ -1160,19 +1224,19 @@ const tableDragStart = (
       }
     }
 
-    // If still no state, try to recover from DOM
+    // 若仍无状态，再尝试基于 DOM 恢复
     if (!tableHandleView?.state) {
       const tableWrapper = safeClosest<HTMLElement>(handleElement, '.tableWrapper');
 
       if (!tableWrapper || !tableHandleView) {
-        // Can't recover - cancel drag silently
+        // 无法恢复则静默取消拖拽
         if (event.dataTransfer) {
           event.dataTransfer.effectAllowed = 'none';
         }
         return;
       }
 
-      // Try to recover table info from DOM
+      // 基于 DOM 获取表格信息
       const tableInfo = getTableFromDOM(tableWrapper, tableHandleView.editor);
       if (!tableInfo) {
         if (event.dataTransfer) {
@@ -1181,7 +1245,7 @@ const tableDragStart = (
         return;
       }
 
-      // Recover basic state from DOM
+      // 构建基础状态
       const tbody = tableWrapper.querySelector('tbody');
       if (!tbody) {
         if (event.dataTransfer) {
@@ -1190,13 +1254,11 @@ const tableDragStart = (
         return;
       }
 
-      // Try to determine index from handle position
-      // This is a fallback - ideally state should exist
+      // 通过手柄位置估算索引（兜底方案）
       const tableRect = tbody.getBoundingClientRect();
       const handleRect = handleElement.getBoundingClientRect();
 
-      // Approximate index based on handle position
-      // This is not perfect but better than throwing an error
+      // 通过坐标粗略推算索引，避免报错
       let approximateIndex = 0;
       if (orientation === 'row') {
         const rowHeight = tableRect.height / tableInfo.node.content.childCount;
@@ -1206,7 +1268,7 @@ const tableDragStart = (
         approximateIndex = Math.floor((handleRect.left - tableRect.left) / colWidth);
       }
 
-      // Create minimal state for drag operation
+      // 构造最小拖拽状态
       const recoveredState: TableHandlesState = {
         show: true,
         showAddOrRemoveRowsButton: false,
@@ -1223,7 +1285,7 @@ const tableDragStart = (
       tableHandleView.state = recoveredState;
     }
 
-    // Final check - if still no state, cancel drag
+    // 最终仍无状态则取消拖拽
     if (!tableHandleView?.state) {
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'none';
@@ -1236,7 +1298,7 @@ const tableDragStart = (
   const index = orientation === 'col' ? state.colIndex : state.rowIndex;
 
   if (index === undefined) {
-    // Can't determine index - cancel drag silently
+    // 无法确定索引，静默取消
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'none';
     }
@@ -1246,7 +1308,7 @@ const tableDragStart = (
   const { blockPos, referencePosCell } = state;
   const mousePos = orientation === 'col' ? event.clientX : event.clientY;
 
-  // Clear cell selection to prevent table reference collapse
+  // 清除单元格选区，避免表格引用塌缩
   if (editor.state.selection instanceof CellSelection) {
     const safeSel = TextSelection.near(editor.state.doc.resolve(blockPos), 1);
     editor.view.dispatch(editor.state.tr.setSelection(safeSel));
@@ -1254,7 +1316,7 @@ const tableDragStart = (
 
   const dragImage = createTableDragImage(editor, orientation, index, blockPos);
 
-  // Configure drag image
+  // 配置拖拽预览图
   if (event.dataTransfer) {
     const handleRect = (
       event.currentTarget as HTMLElement
@@ -1269,7 +1331,7 @@ const tableDragStart = (
     event.dataTransfer.setDragImage(dragImage, offset.x, offset.y);
   }
 
-  // Cleanup drag image
+  // 清理拖拽预览图
   const cleanup = () => dragImage.parentNode?.removeChild(dragImage);
   document.addEventListener('drop', cleanup, { once: true });
   document.addEventListener('dragend', cleanup, { once: true });
@@ -1279,12 +1341,12 @@ const tableDragStart = (
     mousePos
     : 0;
 
-  // Save original cell size to preserve it during drag
+  // 记录原始单元格尺寸，拖拽中保持不变
   const originalCellSize = referencePosCell
     ? { width: referencePosCell.width, height: referencePosCell.height }
     : undefined;
 
-  // Update dragging state
+  // 写回拖拽状态
   tableHandleView.state = {
     ...state,
     draggingState: {
@@ -1299,27 +1361,21 @@ const tableDragStart = (
   editor.view.dispatch(editor.state.tr.setMeta(tableHandlePluginKey, true));
 };
 
-/**
- * Callback for column drag handle
- */
+/** 列拖拽句柄回调 */
 export const colDragStart = (event: {
   dataTransfer: DataTransfer | null;
   currentTarget: EventTarget & Element;
   clientX: number;
 }) => tableDragStart('col', { ...event, clientY: 0 });
 
-/**
- * Callback for row drag handle
- */
+/** 行拖拽句柄回调 */
 export const rowDragStart = (event: {
   dataTransfer: DataTransfer | null;
   currentTarget: EventTarget & Element;
   clientY: number;
 }) => tableDragStart('row', { ...event, clientX: 0 });
 
-/**
- * Drag end cleanup
- */
+/** 拖拽结束后的清理 */
 export const dragEnd = () => {
   if (!tableHandleView || tableHandleView.state === undefined) {
     return;

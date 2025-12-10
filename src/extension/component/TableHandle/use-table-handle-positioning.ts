@@ -16,52 +16,40 @@ type DraggingState = {
   originalCellSize?: { width: number; height: number };
 };
 
-/**
- * Creates a DOMRect for row handle positioning
- * Reference is positioned at table edge, aligned with cell
- */
+/** 创建行手柄的参考 DOMRect，贴边并与单元格对齐 */
 function makeRowRect(
   cell: DOMRect,
   table: DOMRect,
   dragging?: DraggingState
 ): DOMRect {
-  if (dragging?.draggedCellOrientation === 'row') {
-    // Apply the initial offset to maintain handle position
-    const adjustedY = dragging.mousePos + (dragging.initialOffset ?? 0);
-    const clampedY = clamp(adjustedY, table.y, table.bottom - cell.height);
-    return new DOMRect(table.x, clampedY, table.width, cell.height);
-  }
-  return new DOMRect(table.x, cell.y, table.width, cell.height);
+  const baseY = dragging?.draggedCellOrientation === 'row'
+    ? clamp(dragging.mousePos + (dragging.initialOffset ?? 0), table.y, table.bottom - cell.height)
+    : cell.y;
+
+  // 行手柄沿整行宽度，高度保持单元格高度
+  return new DOMRect(table.x, baseY, table.width, cell.height);
 }
 
-/**
- * Creates a DOMRect for column handle positioning
- * Reference is positioned at table edge, aligned with cell
- */
+/** 创建列手柄的参考 DOMRect，贴边并与单元格对齐 */
 function makeColRect(
   cell: DOMRect,
   table: DOMRect,
   dragging?: DraggingState
 ): DOMRect {
-  if (dragging?.draggedCellOrientation === 'col') {
-    // Apply the initial offset to maintain handle position
-    const adjustedX = dragging.mousePos + (dragging.initialOffset ?? 0);
-    const clampedX = clamp(adjustedX, table.x, table.right - cell.width);
-    return new DOMRect(clampedX, table.y, cell.width, table.height);
-  }
-  return new DOMRect(cell.x, table.y, cell.width, table.height);
+  const baseX = dragging?.draggedCellOrientation === 'col'
+    ? clamp(dragging.mousePos + (dragging.initialOffset ?? 0), table.x, table.right - cell.width)
+    : cell.x;
+
+  // 列手柄宽度保持单元格宽度，高度沿整列
+  return new DOMRect(baseX, table.y, cell.width, table.height);
 }
 
-/**
- * Creates a DOMRect for cell handle positioning
- */
+/** 创建单元格手柄的参考 DOMRect */
 function makeCellRect(cell: DOMRect): DOMRect {
   return new DOMRect(cell.x, cell.y, cell.width, 0);
 }
 
-/**
- * Gets the placement configuration for different handle orientations
- */
+/** 根据手柄方向获取浮层位置 */
 function getPlacement(orientation: Orientation) {
   switch (orientation) {
     case 'row':
@@ -74,9 +62,7 @@ function getPlacement(orientation: Orientation) {
   }
 }
 
-/**
- * Gets the offset configuration for different handle orientations
- */
+/** 根据手柄方向获取偏移配置 */
 function getOffset(orientation: Orientation) {
   switch (orientation) {
     case 'row':
@@ -89,9 +75,7 @@ function getOffset(orientation: Orientation) {
   }
 }
 
-/**
- * Factory function to create DOMRect based on orientation
- */
+/** 按方向生成对应的参考 DOMRect */
 function rectFactory(
   orientation: Orientation,
   cell: DOMRect,
@@ -109,9 +93,7 @@ function rectFactory(
   }
 }
 
-/**
- * Hook for positioning individual table handles using Floating UI React
- */
+/** 基于 Floating UI 定位单个表格手柄的 Hook */
 export function useTableHandlePosition(
   orientation: Orientation,
   show: boolean,
@@ -137,15 +119,17 @@ export function useTableHandlePosition(
 
           const refWidth =
             (orientation === 'col'
-              ? (referencePosCell?.width ?? referencePosTable?.width)
-              : referencePosTable?.width) ?? rects.reference.width;
+              ? (referencePosTable?.width ?? referencePosCell?.width)
+              : (referencePosTable?.width ?? referencePosCell?.width)) ??
+            rects.reference.width;
 
           const refHeight =
             (orientation === 'row'
-              ? (referencePosCell?.height ?? referencePosTable?.height)
-              : referencePosTable?.height) ?? rects.reference.height;
+              ? (referencePosTable?.height ?? referencePosCell?.height)
+              : (referencePosTable?.height ?? referencePosCell?.height)) ??
+            rects.reference.height;
 
-          // Set CSS custom properties for styling
+          // 将尺寸写入 CSS 变量，便于样式使用
           elements.floating.style.setProperty(
             '--table-handle-ref-width',
             `${refWidth}px`
@@ -155,7 +139,7 @@ export function useTableHandlePosition(
             `${refHeight}px`
           );
 
-          // Set the main size dimension based on orientation
+          // 主尺寸随方向切换，行取高度、列取宽度
           const mainSize = orientation === 'row' ? refHeight : refWidth;
           elements.floating.style.setProperty(
             '--table-handle-available-size',
@@ -168,26 +152,23 @@ export function useTableHandlePosition(
 
   const { isMounted, styles } = useTransitionStyles(context);
 
-  // Provide a virtual reference rect to Floating UI
-  // Use a function that always returns the latest values to ensure autoUpdate works correctly
+  // 为 Floating UI 提供虚拟参考矩形；使用闭包拿最新值以保证 autoUpdate 生效
   useEffect(() => {
-    // Nothing to reference yet
+    // 尚无参考节点
     if (!referencePosCell || !referencePosTable) {
       refs.setReference(null);
       return;
     }
 
-    // Ignore cell handle while dragging (matches original behavior)
+    // 拖动时隐藏单元格手柄（保持与原行为一致）
     if (draggingState && orientation === 'cell') {
       refs.setReference(null);
       return;
     }
 
-    // Create a virtual element that always returns the latest rect values
-    // This ensures autoUpdate can detect changes when scrolling
+    // 创建返回最新矩形的虚拟元素，保证滚动时位置能自动更新
     refs.setReference({
       getBoundingClientRect: () => {
-        // Always use the latest values from closure
         if (!referencePosCell || !referencePosTable) {
           return new DOMRect();
         }
@@ -196,7 +177,7 @@ export function useTableHandlePosition(
     });
   }, [refs, orientation, referencePosCell, referencePosTable, draggingState]);
 
-  // Update position when reference positions change
+  // 参考位置变化时更新浮层
   useEffect(() => {
     if (!show || !referencePosCell || !referencePosTable) return;
     update();
@@ -223,9 +204,7 @@ export function useTableHandlePosition(
   );
 }
 
-/**
- * Hook for managing positioning of all table handles (row, column, and cell)
- */
+/** 统一返回行、列、单元格手柄的位置数据 */
 export function useTableHandlePositioning(
   show: boolean,
   referencePosCell: DOMRect | null,

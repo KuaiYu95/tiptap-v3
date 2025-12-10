@@ -34,14 +34,23 @@ export const TableHandleAddButton = ({
     }
 
     try {
-      const cellCoord = orientation === 'row'
-        ? { row: index, col: 0 }
-        : { row: 0, col: index };
-
-      selectCellsByCoords(editor, tablePos, [cellCoord], {
-        mode: 'dispatch',
-        dispatch: editor.view.dispatch.bind(editor.view),
-      });
+      if (orientation === 'row') {
+        selectCellsByCoords(
+          editor,
+          tablePos,
+          [{ row: index, col: 0 }],
+          {
+            mode: 'dispatch',
+            dispatch: editor.view.dispatch.bind(editor.view),
+          }
+        );
+      } else {
+        const cellCoord = { row: 0, col: index };
+        selectCellsByCoords(editor, tablePos, [cellCoord], {
+          mode: 'dispatch',
+          dispatch: editor.view.dispatch.bind(editor.view),
+        });
+      }
 
       if (orientation === 'row') {
         editor.chain().focus()[direction === 'before' ? 'addRowBefore' : 'addRowAfter']().run();
@@ -66,6 +75,7 @@ export const TableHandleAddButton = ({
   return (
     <Box
       component="button"
+      className="tiptap-table-add-button"
       onClick={handleClick}
       sx={{
         border: 'none',

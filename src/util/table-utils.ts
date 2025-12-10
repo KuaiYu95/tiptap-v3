@@ -41,9 +41,12 @@ export type TableInfo = {
   map: TableMap;
 } & FindNodeResult;
 
-// ============================================================================
-// HELPER CONSTANTS & UTILITIES
-// ============================================================================
+export type CellWithRect = {
+  pos: number;
+  node: Node;
+  rect: { left: number; right: number; top: number; bottom: number };
+};
+
 
 const EMPTY_CELLS_RESULT = { cells: [], mergedCells: [] };
 
@@ -70,10 +73,6 @@ export function safeClosest<T extends Element>(
   return (start?.closest?.(selector) as T | null) ?? null;
 }
 
-/**
- * Walk up from an element until we find a TD/TH or the table wrapper.
- * Returns the found element plus its tbody (if present).
- */
 export function domCellAround(
   target: Element
 ): DomCellAroundResult | undefined {
@@ -108,23 +107,14 @@ export function domCellAround(
   };
 }
 
-/**
- * Clamps a value between min and max bounds
- */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max));
 }
 
-/**
- * Validates if row/col indices are within table bounds
- */
 function isWithinBounds(row: number, col: number, map: TableMap): boolean {
   return row >= 0 && row < map.height && col >= 0 && col < map.width;
 }
 
-/**
- * Resolves the index for a row or column based on current selection or provided value
- */
 function resolveOrientationIndex(
   state: EditorState,
   table: TableInfo,
@@ -148,9 +138,6 @@ function resolveOrientationIndex(
   return orientation === 'row' ? rect.top : rect.left;
 }
 
-/**
- * Creates a CellInfo object from position data
- */
 function createCellInfo(
   row: number,
   column: number,
@@ -167,9 +154,6 @@ function createCellInfo(
   };
 }
 
-/**
- * Checks if a cell is merged (has colspan or rowspan > 1)
- */
 export function isCellMerged(node: Node | null): boolean {
   if (!node) return false;
   const colspan = node.attrs.colspan ?? 1;
@@ -177,9 +161,29 @@ export function isCellMerged(node: Node | null): boolean {
   return colspan > 1 || rowspan > 1;
 }
 
-/**
- * Generic function to collect cells along a row or column
- */
+export function getUniqueCellsWithRect(table: TableInfo): CellWithRect[] {
+  const seen = new Set<number>();
+  const cells: CellWithRect[] = [];
+  const { map, node, start } = table;
+
+  for (const offset of map.map) {
+    if (seen.has(offset)) continue;
+    seen.add(offset);
+
+    const cellNode = node.nodeAt(offset);
+    if (!cellNode) continue;
+
+    const rect = map.findCell(offset);
+    cells.push({
+      pos: start + offset,
+      node: cellNode,
+      rect,
+    });
+  }
+
+  return cells;
+}
+
 function collectCells(
   editor: Editor | null,
   orientation: Orientation,
@@ -204,7 +208,7 @@ function collectCells(
   );
   if (resolvedIndex === null) return EMPTY_CELLS_RESULT;
 
-  // Bounds check
+  // 边界检查
   const maxIndex = orientation === 'row' ? map.height : map.width;
   if (resolvedIndex < 0 || resolvedIndex >= maxIndex) {
     return EMPTY_CELLS_RESULT;
@@ -243,9 +247,6 @@ function collectCells(
   return { cells, mergedCells };
 }
 
-/**
- * Generic function to count empty cells from the end of a row or column
- */
 function countEmptyCellsFromEnd(
   editor: Editor,
   tablePos: number,
@@ -290,9 +291,6 @@ function countEmptyCellsFromEnd(
   return emptyCount;
 }
 
-/**
- * Get information about the table at the current selection or a specific position.
- */
 export function getTable(editor: Editor | null, tablePos?: number) {
   if (!editor) return null;
 
@@ -324,9 +322,6 @@ export function getTable(editor: Editor | null, tablePos?: number) {
   return { ...table, map: tableMap };
 }
 
-/**
- * Checks if the current text selection is inside a table cell.
- */
 export function isSelectionInCell(state: EditorState): boolean {
   const { selection } = state;
   const $from = selection.$from;
@@ -341,9 +336,6 @@ export function isSelectionInCell(state: EditorState): boolean {
   return false;
 }
 
-/**
- * Runs a function while preserving the editor's selection.
- */
 export function runPreservingCursor(editor: Editor, fn: () => void): boolean {
   const view = editor.view;
   const startSel = view.state.selection;
@@ -368,8 +360,7 @@ export function runPreservingCursor(editor: Editor, fn: () => void): boolean {
     view.dispatch(view.state.tr.setSelection(sel));
     return true;
   } catch {
-    // Fallback: if the exact spot vanished (e.g., cell deleted),
-    // go to the nearest valid position.
+    // 若原位置失效（如单元格被删），则跳转到最近可用位置
     const mappedPos = mapping.map(startSel.from, -1);
     const clamped = clamp(mappedPos, 0, view.state.doc.content.size);
     const near = Selection.near(view.state.doc.resolve(clamped), -1);
@@ -378,9 +369,6 @@ export function runPreservingCursor(editor: Editor, fn: () => void): boolean {
   }
 }
 
-/**
- * Determines whether a table cell is effectively empty.
- */
 export function isCellEmpty(cellNode: Node): boolean {
   if (cellNode.childCount === 0) return true;
 
@@ -400,9 +388,6 @@ export function isCellEmpty(cellNode: Node): boolean {
   return isEmpty;
 }
 
-/**
- * Counts how many consecutive empty rows exist at the bottom of a given table.
- */
 export function countEmptyRowsFromEnd(
   editor: Editor,
   tablePos: number
@@ -410,9 +395,6 @@ export function countEmptyRowsFromEnd(
   return countEmptyCellsFromEnd(editor, tablePos, 'row');
 }
 
-/**
- * Counts how many consecutive empty columns exist at the right edge of a given table.
- */
 export function countEmptyColumnsFromEnd(
   editor: Editor,
   tablePos: number
@@ -420,9 +402,6 @@ export function countEmptyColumnsFromEnd(
   return countEmptyCellsFromEnd(editor, tablePos, 'column');
 }
 
-/**
- * Rounds a number with a symmetric "dead-zone" around integer boundaries.
- */
 export function marginRound(num: number, margin = 0.3): number {
   const floor = Math.floor(num);
   const ceil = Math.ceil(num);
@@ -434,9 +413,6 @@ export function marginRound(num: number, margin = 0.3): number {
   return Math.round(num);
 }
 
-/**
- * Applies the transaction based on the specified mode
- */
 function applySelectionWithMode(
   state: EditorState,
   transaction: Transaction,
@@ -461,9 +437,6 @@ function applySelectionWithMode(
   }
 }
 
-/**
- * Selects table cells by their (row, col) coordinates.
- */
 export function selectCellsByCoords(
   editor: Editor | null,
   tablePos: number,
@@ -489,7 +462,7 @@ export function selectCellsByCoords(
     return;
   }
 
-  // --- Find the smallest rectangle that contains all our coordinates ---
+  // 找出包含所有坐标的最小矩形
   const allRows = cleanedCoords.map((coord) => coord.row);
   const topRow = Math.min(...allRows);
   const bottomRow = Math.max(...allRows);
@@ -498,22 +471,22 @@ export function selectCellsByCoords(
   const leftCol = Math.min(...allCols);
   const rightCol = Math.max(...allCols);
 
-  // --- Convert visual coordinates to document positions ---
+  // 将可视坐标转换为文档位置
   const getCellPositionFromMap = (row: number, col: number): number | null => {
     const cellOffset = tableMap.map[row * tableMap.width + col];
     if (cellOffset === undefined) return null;
     return tablePos + 1 + cellOffset;
   };
 
-  // Anchor = where the selection starts (top-left of bounding box)
+  // Anchor：选区起点（外接矩形左上）
   const anchorPosition = getCellPositionFromMap(topRow, leftCol);
   if (anchorPosition === null) return;
 
-  // Head = where the selection ends (usually bottom-right of bounding box)
+  // Head：选区终点（通常是右下）
   let headPosition = getCellPositionFromMap(bottomRow, rightCol);
   if (headPosition === null) return;
 
-  // --- Handle edge case with merged cells ---
+  // 处理合并单元格的特殊情况
   if (headPosition === anchorPosition) {
     let foundDifferentCell = false;
 
@@ -546,9 +519,6 @@ export function selectCellsByCoords(
   }
 }
 
-/**
- * Select the cell at (row, col) using `cellAround` to respect merged cells.
- */
 export function selectCellAt({
   editor,
   row,
@@ -568,7 +538,7 @@ export function selectCellAt({
   const found = getTable(editor, tablePos);
   if (!found) return false;
 
-  // Bounds check
+  // 边界检查
   if (!isWithinBounds(row, col, found.map)) {
     return false;
   }
@@ -589,9 +559,6 @@ export function selectCellAt({
   return true;
 }
 
-/**
- * Selects a boundary cell of the table based on orientation.
- */
 export function selectLastCell(
   editor: Editor,
   tableNode: Node,
@@ -601,14 +568,14 @@ export function selectLastCell(
   const map = TableMap.get(tableNode);
   const isRow = orientation === 'row';
 
-  // For rows, select bottom-left cell; for columns, select top-right cell
+  // 行选左下，列选右上
   const row = isRow ? map.height - 1 : 0;
   const col = isRow ? 0 : map.width - 1;
 
-  // Calculate the index in the table map
+  // 计算索引
   const index = row * map.width + col;
 
-  // Get the actual cell position from the map (handles merged cells)
+  // 获取真实单元格位置（兼容合并单元格）
   const cellPos = map.map[index];
   if (!cellPos && cellPos !== 0) {
     console.warn('selectLastCell: cell position not found in map', {
@@ -620,7 +587,7 @@ export function selectLastCell(
     return false;
   }
 
-  // Find the row and column of the actual cell
+  // 找到实际的行列坐标
   const cellIndex = map.map.indexOf(cellPos);
   const actualRow = cellIndex >= 0 ? Math.floor(cellIndex / map.width) : 0;
   const actualCol = cellIndex >= 0 ? cellIndex % map.width : 0;
@@ -634,9 +601,6 @@ export function selectLastCell(
   });
 }
 
-/**
- * Get all (row, col) coordinates for a given row or column index.
- */
 export function getIndexCoordinates({
   editor,
   index,
@@ -665,9 +629,85 @@ export function getIndexCoordinates({
     : Array.from({ length: map.height }, (_, row) => ({ row, col: index }));
 }
 
-/**
- * Given a DOM cell element, find its (row, col) indices within the table.
- */
+export function getRowOriginCoords({
+  editor,
+  rowIndex,
+  tablePos,
+  includeMerged = false,
+}: {
+  editor: Editor | null;
+  rowIndex: number;
+  tablePos?: number;
+  includeMerged?: boolean;
+}): { row: number; col: number }[] | null {
+  if (!editor) return null;
+  const table = getTable(editor, tablePos);
+  if (!table) return null;
+
+  const coords: { row: number; col: number }[] = [];
+  const seen = new Set<number>();
+  const { map, node } = table;
+
+  for (let col = 0; col < map.width; col++) {
+    const cellIndex = rowIndex * map.width + col;
+    const offset = map.map[cellIndex];
+    if (offset === undefined || seen.has(offset)) continue;
+    seen.add(offset);
+
+    const rect = map.findCell(offset);
+    if (rect.top !== rowIndex) continue;
+
+    const cellNode = node.nodeAt(offset);
+    if (!cellNode) continue;
+
+    if (!includeMerged && isCellMerged(cellNode)) continue;
+
+    coords.push({ row: rect.top, col: rect.left });
+  }
+
+  return coords.length ? coords : null;
+}
+
+export function getRowOriginCells(
+  editor: Editor | null,
+  rowIndex: number,
+  tablePos?: number,
+  options: { includeMerged?: boolean } = {}
+): { cells: CellInfo[]; mergedCells: CellInfo[] } {
+  if (!editor) return EMPTY_CELLS_RESULT;
+  const table = getTable(editor, tablePos);
+  if (!table) return EMPTY_CELLS_RESULT;
+
+  const cells: CellInfo[] = [];
+  const mergedCells: CellInfo[] = [];
+  const { map, node, start } = table;
+  const { includeMerged = false } = options;
+  const seen = new Set<number>();
+
+  for (let col = 0; col < map.width; col++) {
+    const cellIndex = rowIndex * map.width + col;
+    const offset = map.map[cellIndex];
+    if (offset === undefined || seen.has(offset)) continue;
+    seen.add(offset);
+
+    const rect = map.findCell(offset);
+    if (rect.top !== rowIndex) continue;
+
+    const cellNode = node.nodeAt(offset);
+    if (!cellNode) continue;
+
+    const cell = createCellInfo(rect.top, rect.left, start + offset, cellNode);
+    if (isCellMerged(cellNode)) {
+      mergedCells.push(cell);
+      if (!includeMerged) continue;
+    }
+
+    cells.push(cell);
+  }
+
+  return { cells, mergedCells };
+}
+
 export function getCellIndicesFromDOM(
   cell: HTMLTableCellElement,
   tableNode: Node | null,
@@ -700,9 +740,6 @@ export function getCellIndicesFromDOM(
   return null;
 }
 
-/**
- * Given a DOM element inside a table, find the corresponding table node and its position.
- */
 export function getTableFromDOM(
   tableElement: HTMLElement,
   editor: Editor
@@ -723,9 +760,6 @@ export function getTableFromDOM(
   return null;
 }
 
-/**
- * Checks if a node is a table node
- */
 export function isTableNode(node: Node | null | undefined): node is Node {
   return (
     !!node &&
@@ -733,9 +767,6 @@ export function isTableNode(node: Node | null | undefined): node is Node {
   );
 }
 
-/**
- * Get all cells (and unique merged cells) from a specific row.
- */
 export function getRowCells(
   editor: Editor | null,
   rowIndex?: number,
@@ -744,9 +775,6 @@ export function getRowCells(
   return collectCells(editor, 'row', rowIndex, tablePos);
 }
 
-/**
- * Collect cells (and unique merged cells) from the current table.
- */
 export function getColumnCells(
   editor: Editor | null,
   columnIndex?: number,
@@ -755,9 +783,61 @@ export function getColumnCells(
   return collectCells(editor, 'column', columnIndex, tablePos);
 }
 
-/**
- * Compare two DOMRects for equality (within a small tolerance)
- */
+export function adjustRowspanForRowInsert(
+  editor: Editor,
+  tablePos: number,
+  insertRowIndex: number
+): boolean {
+  const table = getTable(editor, tablePos);
+  if (!table) return false;
+
+  const cells = getUniqueCellsWithRect(table);
+  let tr = editor.state.tr;
+  let changed = false;
+
+  cells.forEach(({ pos, node, rect }) => {
+    const rowspan = node.attrs.rowspan ?? 1;
+    if (rowspan > 1 && rect.top <= insertRowIndex && insertRowIndex < rect.bottom) {
+      tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, rowspan: rowspan + 1 }, node.marks);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    editor.view.dispatch(tr);
+  }
+
+  return changed;
+}
+
+export function adjustRowspanForRowDelete(
+  editor: Editor,
+  tablePos: number,
+  deleteRowIndex: number
+): boolean {
+  const table = getTable(editor, tablePos);
+  if (!table) return false;
+
+  const cells = getUniqueCellsWithRect(table);
+  let tr = editor.state.tr;
+  let changed = false;
+
+  cells.forEach(({ pos, node, rect }) => {
+    const rowspan = node.attrs.rowspan ?? 1;
+    if (rowspan > 1 && rect.top < deleteRowIndex && deleteRowIndex < rect.bottom) {
+      const nextSpan = Math.max(1, rowspan - 1);
+      tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, rowspan: nextSpan }, node.marks);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    editor.view.dispatch(tr);
+  }
+
+  return changed;
+}
+
 export function rectEq(rect1: DOMRect | null, rect2: DOMRect | null): boolean {
   if (!rect1 || !rect2) return rect1 === rect2;
   const tolerance = 0.5;

@@ -19,14 +19,22 @@ import { getThemeTextBgColor, getThemeTextColor } from '@ctzhian/tiptap/contants
 import { Box, Divider, Typography, useTheme } from '@mui/material';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
-import { addColumnAfter, addRowAfter, CellSelection, deleteCellSelection, TableMap } from '@tiptap/pm/tables';
+import { addColumnAfter, CellSelection, deleteCellSelection, TableMap } from '@tiptap/pm/tables';
 import type { Editor } from '@tiptap/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { MoreLineIcon } from '../../../component/Icons/more-line-icon';
 import Menu from '../../../component/Menu';
 import type { MenuItem } from '../../../type';
-import type { Orientation } from '../../../util/table-utils';
-import { getColumnCells, getIndexCoordinates, getRowCells, getTable, selectCellsByCoords } from '../../../util/table-utils';
+import type { CellInfo, CellWithRect, Orientation } from '../../../util/table-utils';
+import {
+  getColumnCells,
+  getIndexCoordinates,
+  getRowCells,
+  getRowOriginCoords,
+  getTable,
+  getUniqueCellsWithRect,
+  selectCellsByCoords
+} from '../../../util/table-utils';
 import { dragEnd } from '../../node/TableHandler/plugin';
 import './TableHandleMenu.css';
 
@@ -54,6 +62,15 @@ export const TableHandleMenu = ({
   const theme = useTheme();
   const [isDragging, setIsDragging] = useState(false);
 
+  const dedupeCells = useCallback((cells: CellInfo[]) => {
+    const seen = new Set<number>();
+    return cells.filter((cell) => {
+      if (seen.has(cell.pos)) return false;
+      seen.add(cell.pos);
+      return true;
+    });
+  }, []);
+
   const selectRowOrColumn = useCallback(() => {
     if (
       !editor ||
@@ -64,18 +81,28 @@ export const TableHandleMenu = ({
       return;
 
     try {
-      const { width, height } = TableMap.get(tableNode);
-      const start =
-        orientation === 'row' ? { row: index, col: 0 } : { row: 0, col: index };
-      const end =
-        orientation === 'row'
-          ? { row: index, col: width - 1 }
-          : { row: height - 1, col: index };
+      if (orientation === 'row') {
+        const coords = getRowOriginCoords({
+          editor,
+          rowIndex: index,
+          tablePos,
+          includeMerged: false,
+        });
+        if (!coords) return;
+        selectCellsByCoords(editor, tablePos, coords, {
+          mode: 'dispatch',
+          dispatch: editor.view.dispatch.bind(editor.view),
+        });
+      } else {
+        const { width, height } = TableMap.get(tableNode);
+        const start = { row: 0, col: index };
+        const end = { row: height - 1, col: index };
 
-      selectCellsByCoords(editor, tablePos, [start, end], {
-        mode: 'dispatch',
-        dispatch: editor.view.dispatch.bind(editor.view),
-      });
+        selectCellsByCoords(editor, tablePos, [start, end], {
+          mode: 'dispatch',
+          dispatch: editor.view.dispatch.bind(editor.view),
+        });
+      }
     } catch (error) {
       console.warn('Failed to select row/column:', error);
     }
@@ -87,15 +114,17 @@ export const TableHandleMenu = ({
     }
 
     try {
-      const cells = orientation === 'row'
-        ? getRowCells(editor, index, tablePos)
-        : getColumnCells(editor, index, tablePos);
+      if (orientation === 'row') {
+        const rowCells = getRowCells(editor, index, tablePos);
+        return dedupeCells(rowCells.cells).length > 0;
+      }
 
-      return cells.cells.length > 0 && cells.mergedCells.length === 0;
+      const cells = getColumnCells(editor, index, tablePos);
+      return dedupeCells(cells.cells).length > 0 && cells.mergedCells.length === 0;
     } catch {
       return false;
     }
-  }, [editor, index, orientation, tablePos, tableNode, editor?.state.doc]);
+  }, [dedupeCells, editor, index, orientation, tablePos, tableNode, editor?.state.doc]);
 
   const duplicateRowOrColumn = useCallback(() => {
     if (!editor || typeof index !== 'number' || typeof tablePos !== 'number' || !canDuplicate) {
@@ -103,61 +132,96 @@ export const TableHandleMenu = ({
     }
 
     try {
-      const originalCells = orientation === 'row'
-        ? getRowCells(editor, index, tablePos)
-        : getColumnCells(editor, index, tablePos);
-
-      if (originalCells.cells.length === 0) return;
-
-      selectRowOrColumn();
-
-      let addSuccess = false;
-      if (editor.state.selection instanceof CellSelection) {
-        addSuccess = orientation === 'row'
-          ? editor.chain().focus().addRowAfter().run()
-          : editor.chain().focus().addColumnAfter().run();
+      // 添加新行/列
+      if (orientation === 'row') {
+        selectRowOrColumn();
+        const added = editor.chain().focus().addRowAfter().run();
+        if (!added) return;
       } else {
-        const sourceCoords = getIndexCoordinates({
-          editor,
-          index,
-          orientation,
-          tablePos,
-        });
-        if (!sourceCoords) return;
-
-        const stateWithCellSel = selectCellsByCoords(editor, tablePos, sourceCoords, {
-          mode: 'state',
-        });
-        if (!stateWithCellSel) return;
-
-        const dispatch = (tr: Transaction) => editor.view.dispatch(tr);
-        if (orientation === 'row') {
-          addSuccess = addRowAfter(stateWithCellSel as EditorState, dispatch);
+        selectRowOrColumn();
+        let addSuccess = false;
+        if (editor.state.selection instanceof CellSelection) {
+          addSuccess = editor.chain().focus().addColumnAfter().run();
         } else {
+          const sourceCoords = getIndexCoordinates({
+            editor,
+            index,
+            orientation,
+            tablePos,
+          });
+          if (!sourceCoords) return;
+
+          const stateWithCellSel = selectCellsByCoords(editor, tablePos, sourceCoords, {
+            mode: 'state',
+          });
+          if (!stateWithCellSel) return;
+
+          const dispatch = (tr: Transaction) => editor.view.dispatch(tr);
           addSuccess = addColumnAfter(stateWithCellSel as EditorState, dispatch);
         }
-      }
 
-      if (!addSuccess) return;
+        if (!addSuccess) return;
+      }
 
       const updatedTable = getTable(editor, tablePos);
       if (!updatedTable) return;
 
+      // 获取新添加的行/列中的单元格
       const newCells = orientation === 'row'
-        ? getRowCells(editor, index + 1, updatedTable.pos)
-        : getColumnCells(editor, index + 1, updatedTable.pos);
+        ? dedupeCells(getRowCells(editor, index + 1, updatedTable.pos).cells)
+        : dedupeCells(getColumnCells(editor, index + 1, updatedTable.pos).cells);
 
-      if (newCells.cells.length === 0) return;
+      // 获取要复制的原始行/列中的单元格
+      const originalCells = orientation === 'row'
+        ? dedupeCells(getRowCells(editor, index, tablePos).cells)
+        : dedupeCells(getColumnCells(editor, index, tablePos).cells);
+
+      if (newCells.length === 0 || originalCells.length === 0) return;
 
       const { state, view } = editor;
-      const tr = state.tr;
+      let tr = state.tr;
 
-      const cellsToReplace = [...newCells.cells].reverse();
-      const originalCellsReversed = [...originalCells.cells].reverse();
+      // 处理合并单元格
+      const table = getTable(editor, tablePos);
+      let cellsToSkip = new Set<number>(); // 记录要跳过的单元格位置
+
+      if (table && orientation === 'row') {
+        const cellsWithRect = getUniqueCellsWithRect(table);
+
+        cellsWithRect.forEach((cell: CellWithRect) => {
+          const { pos, node, rect } = cell;
+          const rowspan = node.attrs.rowspan ?? 1;
+          const colspan = rect.right - rect.left;
+
+          if (rowspan > 1 && rect.top === index) {
+            tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, rowspan: rowspan + 1 }, node.marks);
+          }
+          else if (rowspan > 1 && rect.top < index && index < rect.bottom) {
+            // 记录被纵向合并覆盖的每一列，注意合并单元格可能横跨多列
+            for (let col = rect.left; col < rect.left + colspan; col++) {
+              cellsToSkip.add(col);
+            }
+          }
+        });
+      }
+
+      // 按列号建立映射，保证合并（横跨多列）时能精确匹配原始单元格
+      const originalCellByColumn = new Map<number, CellInfo>();
+      originalCells.forEach((cell) => {
+        originalCellByColumn.set(cell.column, cell);
+      });
+
+      const cellsToReplace = [...newCells].reverse();
 
       cellsToReplace.forEach((newCell, reverseIndex) => {
-        const originalCell = originalCellsReversed[reverseIndex];
+        const originalCell = originalCellByColumn.get(newCell.column);
         if (newCell.node && originalCell?.node) {
+          // 使用实际列索引判断是否需要跳过被合并覆盖的单元格，避免反向遍历导致错位
+          const shouldSkip = orientation === 'row' && cellsToSkip.has(newCell.column);
+          if (shouldSkip) {
+            return;
+          }
+
           const duplicatedCell = newCell.node.type.create(
             { ...originalCell.node.attrs },
             originalCell.node.content,
@@ -165,7 +229,7 @@ export const TableHandleMenu = ({
           );
 
           const cellEnd = newCell.pos + newCell.node.nodeSize;
-          tr.replaceWith(newCell.pos, cellEnd, duplicatedCell);
+          tr = tr.replaceWith(newCell.pos, cellEnd, duplicatedCell);
         }
       });
 
@@ -240,14 +304,24 @@ export const TableHandleMenu = ({
         label: orientation === 'row' ? '上方插入行' : '左侧插入列',
         icon: orientation === 'row' ? <InsertRowTopIcon sx={{ fontSize: '1rem' }} /> : <InsertColumnLeftIcon sx={{ fontSize: '1rem' }} />,
         onClick: () => {
-          if (typeof index === 'number' && typeof tablePos === 'number') {
-            const cellCoord = orientation === 'row'
-              ? { row: index, col: 0 }
-              : { row: 0, col: index };
-            selectCellsByCoords(editor, tablePos, [cellCoord], {
-              mode: 'dispatch',
-              dispatch: editor.view.dispatch.bind(editor.view),
-            });
+          if (editor && typeof index === 'number' && typeof tablePos === 'number') {
+            if (orientation === 'row') {
+              selectCellsByCoords(
+                editor,
+                tablePos,
+                [{ row: index, col: 0 }],
+                {
+                  mode: 'dispatch',
+                  dispatch: editor.view.dispatch.bind(editor.view),
+                }
+              );
+            } else {
+              const cellCoord = { row: 0, col: index };
+              selectCellsByCoords(editor, tablePos, [cellCoord], {
+                mode: 'dispatch',
+                dispatch: editor.view.dispatch.bind(editor.view),
+              });
+            }
           }
 
           if (orientation === 'row') {
@@ -262,14 +336,24 @@ export const TableHandleMenu = ({
         label: orientation === 'row' ? '下方插入行' : '右侧插入列',
         icon: orientation === 'row' ? <InsertRowBottomIcon sx={{ fontSize: '1rem' }} /> : <InsertColumnRightIcon sx={{ fontSize: '1rem' }} />,
         onClick: () => {
-          if (typeof index === 'number' && typeof tablePos === 'number') {
-            const cellCoord = orientation === 'row'
-              ? { row: index, col: 0 }
-              : { row: 0, col: index };
-            selectCellsByCoords(editor, tablePos, [cellCoord], {
-              mode: 'dispatch',
-              dispatch: editor.view.dispatch.bind(editor.view),
-            });
+          if (editor && typeof index === 'number' && typeof tablePos === 'number') {
+            if (orientation === 'row') {
+              selectCellsByCoords(
+                editor,
+                tablePos,
+                [{ row: index, col: 0 }],
+                {
+                  mode: 'dispatch',
+                  dispatch: editor.view.dispatch.bind(editor.view),
+                }
+              );
+            } else {
+              const cellCoord = { row: 0, col: index };
+              selectCellsByCoords(editor, tablePos, [cellCoord], {
+                mode: 'dispatch',
+                dispatch: editor.view.dispatch.bind(editor.view),
+              });
+            }
           }
 
           if (orientation === 'row') {
@@ -680,4 +764,5 @@ export const TableHandleMenu = ({
     />
   );
 };
+
 

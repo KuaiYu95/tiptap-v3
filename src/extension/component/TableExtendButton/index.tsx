@@ -27,9 +27,7 @@ interface TableExtendRowColumnButtonProps {
   orientation: Orientation;
 }
 
-/**
- * Simplified button component for extending/reducing table dimensions
- */
+/** 控制表格扩展/收缩行列的简单按钮 */
 export const TableExtendRowColumnButton: React.FC<
   TableExtendRowColumnButtonProps
 > = ({
@@ -108,7 +106,7 @@ export const TableExtendRowColumnButton: React.FC<
 
         if (delta === 0) return;
 
-        // Add rows/columns
+        // 增加行/列
         if (delta > 0) {
           runPreservingCursor(editor, () => {
             selectLastCell(editor, state.block, state.blockPos, orientation);
@@ -122,7 +120,7 @@ export const TableExtendRowColumnButton: React.FC<
             }
           });
         }
-        // Remove rows/columns - but only if they're empty
+        // 删除行/列（仅删除空行/空列）
         else {
           runPreservingCursor(editor, () => {
             const absDelta = Math.abs(delta);
@@ -131,7 +129,7 @@ export const TableExtendRowColumnButton: React.FC<
               ? countEmptyRowsFromEnd(editor, state.blockPos)
               : countEmptyColumnsFromEnd(editor, state.blockPos);
 
-            // Only remove up to the number of empty cells, and keep at least 1
+            // 最多删除空白数量，且至少保留一行/一列
             const safeToRemove = Math.min(absDelta, emptyCount, currentCount - 1);
 
             selectLastCell(editor, state.block, state.blockPos, orientation);
@@ -242,7 +240,18 @@ export const TableExtendRowColumnButtons: React.FC<
 
   if (!state) return null;
 
-  // Insert into .table-controls container (widgetContainer)
+  // 检查是否为嵌套表格，如果是则不显示扩展按钮
+  if (editor && state.blockPos !== undefined) {
+    const $pos = editor.state.doc.resolve(state.blockPos);
+    for (let d = $pos.depth - 1; d >= 0; d--) {
+      const node = $pos.node(d);
+      if (node.type.name === 'table') {
+        return null;
+      }
+    }
+  }
+
+  // 插入到 .table-controls 容器（widgetContainer）
   const rootElement = state.widgetContainer || document.body;
 
   return (

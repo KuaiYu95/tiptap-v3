@@ -24,16 +24,11 @@ export interface TableHandleButtonProps {
 }
 
 export interface TableHandleProps {
-  /**
-   * The Tiptap editor instance.
-   */
+  /** Tiptap 编辑器实例 */
   editor?: Editor | null;
 }
 
-/**
- * Main table handle component that manages the positioning and rendering
- * of table row/column handles, extend buttons, and context menus.
- */
+/** 负责行/列手柄、扩展按钮与菜单的定位与渲染 */
 export function TableHandle({
   editor: providedEditor,
 }: TableHandleProps) {
