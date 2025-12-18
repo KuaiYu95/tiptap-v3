@@ -13,10 +13,16 @@ const ReadonlyImage = ({
 }: ReadonlyImageProps) => {
   return <NodeViewWrapper
     className={`image-wrapper`}
+    as='span'
   >
     <Box component={'span'} sx={{
       position: 'relative',
-      display: 'inline-block',
+      display: 'inline-flex',
+      border: '1px solid',
+      borderColor: 'divider',
+      overflow: 'hidden',
+      borderRadius: 'var(--mui-shape-borderRadius)',
+      maxWidth: '100%',
     }}>
       <ImageViewerItem src={attrs.src}>
         <img
@@ -24,7 +30,6 @@ const ReadonlyImage = ({
           width={attrs.width}
           style={{
             maxWidth: '100%',
-            height: 'auto',
             cursor: 'pointer',
           }}
         />
