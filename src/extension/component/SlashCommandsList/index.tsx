@@ -22,7 +22,7 @@ const SlashCommandsList = forwardRef<SlashCommandsListRef, SlashCommandsListProp
         }}
       >
         <Stack direction={'row'} flexWrap={'wrap'}>
-          {items.slice(0, 17).map((item, index) => (
+          {items.slice(0, 18).map((item, index) => (
             <ToolbarItem
               key={index}
               shortcutKey={item?.shortcutKey || []}

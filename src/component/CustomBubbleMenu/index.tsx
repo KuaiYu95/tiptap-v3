@@ -71,7 +71,8 @@ const CustomBubbleMenu = ({ editor, more }: CustomBubbleMenuProps) => {
         editor.isActive('flow') ||
         editor.isActive('table') ||
         editor.isActive('flipGrid') ||
-        editor.isActive('flipGridColumn')
+        editor.isActive('flipGridColumn') ||
+        editor.isActive('excalidraw')
       ) {
         return false
       }
