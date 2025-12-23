@@ -137,6 +137,7 @@
 .tiptap.ProseMirror .react-renderer.node-inlineAttachment,
 .tiptap.ProseMirror .react-renderer.node-blockLink,
 .tiptap.ProseMirror .react-renderer.node-inlineLink,
+.tiptap.ProseMirror .react-renderer.node-excalidraw,
 .tiptap.ProseMirror .react-renderer.node-blockMath,
 .tiptap.ProseMirror .react-renderer.node-inlineMath {
   box-sizing: border-box;

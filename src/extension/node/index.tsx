@@ -7,6 +7,7 @@ export * from './Emoji';
 export * from './FileHandler';
 export * from './FlipGrid';
 export * from './Flow';
+export * from './DrawPanel';
 export * from './HorizontalRule';
 export * from './Iframe';
 export * from './Image';
@@ -24,4 +25,3 @@ export * from './VerticalAlign';
 export * from './Video';
 export * from './YamlFormat';
 export * from './Youtube';
-

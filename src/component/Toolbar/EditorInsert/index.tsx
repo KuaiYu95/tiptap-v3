@@ -2,7 +2,7 @@ import { getShortcutKeyText } from '@ctzhian/tiptap/util';
 import { Typography } from '@mui/material';
 import { Editor } from '@tiptap/react';
 import React from 'react';
-import { AddCircleFillIcon, ArrowDownSLineIcon, AttachmentLineIcon, BilibiliLineIcon, CheckboxCircleFillIcon, CloseCircleFillIcon, CodeBoxLineIcon, CodeLineIcon, CodeSSlashLineIcon, DoubleQuotesLIcon, EmotionLineIcon, ErrorWarningFillIcon, FlipGridIcon, FlowChartIcon, FormulaIcon, FunctionsIcon, ImageLineIcon, Information2FillIcon, Information2LineIcon, MenuFold2FillIcon, MovieLineIcon, Music2LineIcon, SeparatorIcon, SquareRootIcon, Table2Icon, UserSmileFillIcon, WindowFillIcon } from '../../Icons';
+import { AddCircleFillIcon, ArrowDownSLineIcon, AttachmentLineIcon, BilibiliLineIcon, CheckboxCircleFillIcon, CloseCircleFillIcon, CodeBoxLineIcon, CodeLineIcon, CodeSSlashLineIcon, DoubleQuotesLIcon, EmotionLineIcon, ErrorWarningFillIcon, FlipGridIcon, FlowChartIcon, FormulaIcon, FunctionsIcon, ImageLineIcon, Information2FillIcon, Information2LineIcon, MenuFold2FillIcon, MovieLineIcon, Music2LineIcon, SeparatorIcon, SketchingIcon, SquareRootIcon, Table2Icon, UserSmileFillIcon, WindowFillIcon } from '../../Icons';
 import Menu from '../../Menu';
 import ToolbarItem from '../Item';
 import TableSizePicker from '../TableSizePicker';
@@ -174,6 +174,12 @@ const EditorInsert = ({ editor }: EditorInsertProps) => {
         key: 'flow',
         icon: <FlowChartIcon sx={{ fontSize: '1rem' }} />,
         onClick: () => editor.commands.setFlow({}),
+      },
+      {
+        label: 'Excalidraw 绘图',
+        key: 'excalidraw',
+        icon: <SketchingIcon sx={{ fontSize: '1rem' }} />,
+        onClick: () => editor.commands.setExcalidraw()
       },
       {
         label: '代码',

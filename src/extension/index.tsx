@@ -26,6 +26,7 @@ import {
   DetailsExtension,
   DetailsSummaryExtension,
   EmojiExtension,
+  ExcalidrawExtension,
   FileHandlerExtension,
   FlipGridColumnExtension,
   FlipGridExtension,
@@ -185,6 +186,10 @@ export const getExtensions = ({
 
     if (!exclude?.includes('aiWriting') && onAiWritingGetSuggestion) {
       defaultExtensions.push(AiWritingExtension({ onAiWritingGetSuggestion }))
+    }
+
+    if (!exclude?.includes('excalidraw')) {
+      defaultExtensions.push(ExcalidrawExtension({ onUpload }))
     }
   } else { // 只读模式
     if (!exclude?.includes('structuredDiff')) {

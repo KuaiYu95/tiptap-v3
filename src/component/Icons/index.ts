@@ -123,6 +123,7 @@ export { ScreenshotLineIcon } from './screenshot-line-icon';
 export { ScrollToBottomLineIcon } from './scroll-to-bottom-line-icon';
 export { SeparatorIcon } from './separator-icon';
 export { ShareBoxLineIcon } from './share-box-line-icon';
+export { SketchingIcon } from './sketching-icon';
 export { SkipDownIcon } from './skip-down-icon';
 export { SkipLeftIcon } from './skip-left-icon';
 export { SkipRightIcon } from './skip-right-icon';

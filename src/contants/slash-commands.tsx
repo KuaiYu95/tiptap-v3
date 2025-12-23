@@ -1,6 +1,6 @@
 import { Editor } from '@tiptap/react';
 import * as React from 'react';
-import { AttachmentLineIcon, BilibiliLineIcon, CodeBoxLineIcon, CodeLineIcon, DoubleQuotesLIcon, EmotionLineIcon, FlipGridIcon, FlowChartIcon, FunctionsIcon, H1Icon, H2Icon, H3Icon, ImageLineIcon, Information2LineIcon, LinkIcon, ListCheck2Icon, ListOrdered2Icon, ListUnorderedIcon, MenuFold2FillIcon, MovieLineIcon, Music2LineIcon, SeparatorIcon, SquareRootIcon, Table2Icon, WindowFillIcon } from '../component/Icons';
+import { AttachmentLineIcon, BilibiliLineIcon, CodeBoxLineIcon, CodeLineIcon, DoubleQuotesLIcon, EmotionLineIcon, FlipGridIcon, FlowChartIcon, FunctionsIcon, H1Icon, H2Icon, H3Icon, ImageLineIcon, Information2LineIcon, LinkIcon, ListCheck2Icon, ListOrdered2Icon, ListUnorderedIcon, MenuFold2FillIcon, MovieLineIcon, Music2LineIcon, SeparatorIcon, SketchingIcon, SquareRootIcon, Table2Icon, WindowFillIcon } from '../component/Icons';
 
 export const slashCommands = [
   {
@@ -27,30 +27,6 @@ export const slashCommands = [
       editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run()
     }
   },
-  // {
-  //   title: '标题4',
-  //   shortcutKey: ['ctrl', 'alt', '4'],
-  //   icon: <H4Icon sx={{ fontSize: '1rem' }} />,
-  //   command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) => {
-  //     editor.chain().focus().deleteRange(range).setNode('heading', { level: 4 }).run()
-  //   }
-  // },
-  // {
-  //   title: '标题5',
-  //   shortcutKey: ['ctrl', 'alt', '5'],
-  //   icon: <H5Icon sx={{ fontSize: '1rem' }} />,
-  //   command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) => {
-  //     editor.chain().focus().deleteRange(range).setNode('heading', { level: 5 }).run()
-  //   }
-  // },
-  // {
-  //   title: '标题6',
-  //   shortcutKey: ['ctrl', 'alt', '6'],
-  //   icon: <H6Icon sx={{ fontSize: '1rem' }} />,
-  //   command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) => {
-  //     editor.chain().focus().deleteRange(range).setNode('heading', { level: 6 }).run()
-  //   }
-  // },
   {
     title: '有序列表',
     shortcutKey: ['ctrl', 'shift', '7'],
@@ -141,6 +117,13 @@ export const slashCommands = [
     icon: <FlowChartIcon sx={{ fontSize: '1rem' }} />,
     command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) => {
       editor.chain().focus().deleteRange(range).setFlow({ code: '', width: '100%' }).run()
+    }
+  },
+  {
+    title: 'Excalidraw 绘图',
+    icon: <SketchingIcon sx={{ fontSize: '1rem' }} />,
+    command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) => {
+      editor.chain().focus().deleteRange(range).setExcalidraw().run()
     }
   },
   {
