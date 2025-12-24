@@ -10,9 +10,6 @@ type ExcalidrawImperativeAPI = {
 }
 
 const ExcalidrawEditor = React.lazy(() => {
-  if (typeof window !== 'undefined' && !(window as Window & { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH) {
-    (window as Window & { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = '/'
-  }
   return import('@excalidraw/excalidraw').then((module) => ({
     default: module.Excalidraw,
   }))
@@ -50,11 +47,10 @@ const ExcalidrawEditorWrapper: React.FC<ExcalidrawEditorProps> = ({
             exportScale: 2,
           },
           files,
-          mimeType: 'image/png',
-          quality: 0.92,
+          mimeType: 'image/svg+xml',
         })
 
-        const file = new File([blob], `excalidraw-${Date.now()}.png`, { type: 'image/png' })
+        const file = new File([blob], `excalidraw-${Date.now()}.svg`, { type: 'image/svg+xml' })
         onSave(file)
       } catch (error) {
         console.error('Failed to export Excalidraw as image', error)
@@ -65,7 +61,7 @@ const ExcalidrawEditorWrapper: React.FC<ExcalidrawEditorProps> = ({
   }
 
   return (
-    <React.Suspense fallback={<div>加载中...</div>}>
+    <React.Suspense fallback={<div style={{ textAlign: 'center', padding: 16, fontSize: 12 }}>加载中...</div>}>
       <div style={{ width: '100%', height: '100%', position: 'relative' }}>
         <ExcalidrawEditor
           excalidrawAPI={(api) => {
