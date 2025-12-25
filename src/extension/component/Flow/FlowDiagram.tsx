@@ -34,7 +34,17 @@ const FlowDiagram: React.FC<FlowDiagramProps> = ({ code, onError }) => {
         <Box sx={{ color: 'text.secondary', fontSize: '14px' }}>正在渲染...</Box>
       )}
       {error && (
-        <Box sx={{ color: 'error.main', padding: '20px', textAlign: 'center', fontSize: '14px' }}>
+        <Box
+          sx={{
+            color: 'error.main',
+            padding: '20px',
+            textAlign: 'center',
+            fontSize: '14px',
+            whiteSpace: 'pre-line',
+            maxWidth: '100%',
+            wordBreak: 'break-word',
+          }}
+        >
           {error}
         </Box>
       )}

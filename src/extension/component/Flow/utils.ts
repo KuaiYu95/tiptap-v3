@@ -10,6 +10,7 @@ const defaultMermaidConfig: MermaidConfig = {
   theme: 'default',
   securityLevel: 'loose',
   look: 'handDrawn', // 启用手绘效果
+  suppressErrorRendering: true, // 抑制错误渲染，由应用层处理错误
 }
 
 /**

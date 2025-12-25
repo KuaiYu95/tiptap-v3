@@ -52,7 +52,7 @@ const ReadonlyFlow = ({
             sx={{
               width: '100%',
               height: '100%',
-              minHeight: '200px',
+              minHeight: error ? 'auto' : '200px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -61,7 +61,17 @@ const ReadonlyFlow = ({
             }}
           >
             {error && (
-              <Box sx={{ color: 'error.main', padding: '20px', textAlign: 'center', fontSize: '14px' }}>
+              <Box
+                sx={{
+                  color: 'error.main',
+                  padding: '20px',
+                  textAlign: 'center',
+                  fontSize: '14px',
+                  whiteSpace: 'pre-line',
+                  maxWidth: '100%',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {error}
               </Box>
             )}
