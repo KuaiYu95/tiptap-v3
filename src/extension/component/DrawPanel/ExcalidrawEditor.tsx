@@ -38,8 +38,9 @@ const ExcalidrawEditorWrapper: React.FC<ExcalidrawEditorProps> = ({
         const files = excalidrawAPIRef.current.getFiles()
 
         const excalidrawModule = await import('@excalidraw/excalidraw')
-        const { exportToBlob } = excalidrawModule
-        const blob = await exportToBlob({
+        const { exportToSvg } = excalidrawModule
+
+        const svgElement = await exportToSvg({
           elements,
           appState: {
             ...appState,
@@ -47,13 +48,14 @@ const ExcalidrawEditorWrapper: React.FC<ExcalidrawEditorProps> = ({
             exportScale: 2,
           },
           files,
-          mimeType: 'image/svg+xml',
         })
 
+        const svgString = new XMLSerializer().serializeToString(svgElement)
+        const blob = new Blob([svgString], { type: 'image/svg+xml' })
         const file = new File([blob], `excalidraw-${Date.now()}.svg`, { type: 'image/svg+xml' })
         onSave(file)
       } catch (error) {
-        console.error('Failed to export Excalidraw as image', error)
+        console.error('Failed to export Excalidraw as SVG', error)
       }
     } else {
       console.warn('Excalidraw API not available')
