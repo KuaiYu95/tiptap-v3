@@ -1,6 +1,6 @@
 {
   "name": "@ctzhian/tiptap",
-  "version": "2.11.2",
+  "version": "2.11.4",
   "description": "基于 Tiptap 二次开发的编辑器组件",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -80,6 +80,7 @@
     "@types/diff-match-patch": "^1.0.36",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "@types/sanitize-html": "^2.16.0",
     "@umijs/lint": "^4.0.0",
     "dumi": "^2.4.21",
     "eslint": "^8.23.0",
@@ -132,7 +133,6 @@
     "core-js": "^3.46.0",
     "diff-match-patch": "^1.0.5",
     "highlight.js": "^11.11.1",
-    "isomorphic-dompurify": "^2.34.0",
     "jszip": "^3.10.1",
     "katex": "^0.16.22",
     "linkifyjs": "^4.3.2",
@@ -142,6 +142,7 @@
     "react-colorful": "^5.6.1",
     "react-image-crop": "^11.0.10",
     "react-photo-view": "^1.2.7",
+    "sanitize-html": "^2.17.0",
     "uuid": "^11.1.0"
   }
 }
