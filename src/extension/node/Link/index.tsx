@@ -346,9 +346,22 @@ export const InlineLinkExtension = Node.create<LinkOptions>({
       {
         tag: 'a',
         getAttrs: dom => {
-          const href = (dom as HTMLElement).getAttribute('href')
-          const dataType = (dom as HTMLElement).getAttribute('type')
-          const download = (dom as HTMLElement).getAttribute('download')
+          const element = dom as HTMLElement
+          const href = element.getAttribute('href')
+          const dataType = element.getAttribute('type')
+          const download = element.getAttribute('download')
+
+          // 如果 <a> 标签内部包含图片，则视为"图片链接"，不解析为 inlineLink，
+          // 让内部的 <img> 节点按普通图片逻辑处理，避免丢失图片和文本。
+          const hasImageChild = Array.from(element.childNodes).some(node => {
+            return (
+              node.nodeType === 1 &&
+              (node as HTMLElement).tagName.toLowerCase() === 'img'
+            )
+          })
+          if (hasImageChild) {
+            return false
+          }
 
           // 如果存在 download 属性，认为是附件，不解析为链接
           if (download !== null) {
@@ -373,12 +386,12 @@ export const InlineLinkExtension = Node.create<LinkOptions>({
           }
           return {
             href,
-            target: dom.getAttribute('target') || this.options.HTMLAttributes.target,
-            class: dom.getAttribute('class') || this.options.HTMLAttributes.class,
-            rel: (dom as HTMLElement).getAttribute('rel'),
-            title: (dom as HTMLElement).textContent || (dom as HTMLElement).getAttribute('title'),
-            type: (dom as HTMLElement).getAttribute('type') || 'icon',
-            download: (dom as HTMLElement).getAttribute('download'),
+            target: element.getAttribute('target') || this.options.HTMLAttributes.target,
+            class: element.getAttribute('class') || this.options.HTMLAttributes.class,
+            rel: element.getAttribute('rel'),
+            title: element.textContent || element.getAttribute('title'),
+            type: element.getAttribute('type') || 'icon',
+            download: element.getAttribute('download'),
           }
         },
       },
