@@ -78,6 +78,7 @@ export const getExtensions = ({
       bulletList: false,
       listKeymap: false,
       undoRedo: exclude?.includes('undoRedo') ? false : undefined,
+      trailingNode: editable ? undefined : false,
       dropcursor: {
         color: 'var(--mui-palette-primary-main)',
         width: 2,
