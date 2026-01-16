@@ -4,7 +4,7 @@ import { Editor as TiptapEditor } from '@tiptap/core';
 import React from 'react';
 import '../index.css';
 
-const EDITABLE = true;
+const EDITABLE = false;
 const DEFAULT_CONTENT_TYPE = 'html'
 const DEFAULT_HTML_CONTENT = `<p></p>
 <p>PandaWiki 是一款 <span data-tooltip="模型">AI</span> 大模<code>型驱动的开源知识库搭</code>建系统，F<strong>AQ 、 博客系统 ，借助大模型的力量为你提供 AI </strong>创作 、 AI 问答 、 AI 搜索 等能力。借<span style="color: rgb(90, 141, 218);">助大模型的</span><span style="background-color: rgb(255, 204, 188); color: rgb(90, 141, 218);">力量为你提</span><span style="color: rgb(90, 141, 218);">供 AI 创</span>作能力。PandaWiki 是<u>一款 AI 大模型驱动的开源知识库搭建系统，帮</u>助你快速构建智能化的 <s><u>产品文档、技术</u></s>文档、FAQ 、<s> 博客系统 ，借助大模型的</s>力量系统 ，<span style="background-color: rgb(172, 84, 84);">借助大模型的力量为你提供 AI 创作 、 AI 问</span>答 、 AI 搜索 等能力。的力量为<mark>你提供 AI 创作 、 AI 问答 、</mark> AI 搜索。</p>
@@ -32,9 +32,12 @@ const DEFAULT_HTML_CONTENT = `<p></p>
 <a target=\"_blank\" type=\"block\" href=\"http://localhost:8000/components/editor\" title=\"看风景\">看风景</a>
 <h6>📎 附件</h6>
 <div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"谁是我们的敌人？谁是我们的朋友？这个问题是革命的首要问题。中国过去一切革命斗争成.txt\" data-size=\"18.27 KB\"></div>
-<p>行内附件：<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"font_4856251_qynqqohzdp.js\" data-size=\"412.34 KB\"></span><span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"雷池项目设计方案.docx\" data-size=\"635.74 KB\"></span></p>
-<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"b0f4a3e0-639f-4c09-ab33-ea9417939f87.tiff\" data-size=\"3.03 MB\"></div>
-<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pdf\" data-size=\"40.18 MB\"></div>
+<p>行内附件：
+<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"font_4856251_qynqqohzdp.js\" data-size=\"412.34 KB\"></span>
+<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"雷池项目设计方案.pdf\" data-size=\"635.74 KB\"></span>
+</p>
+<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"b0f4a3e0-639f-4c09-ab33-ea9417939f87.pdf\" data-size=\"3.03 MB\"></div>
+<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-view=\"1\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pdf\" data-size=\"40.18 MB\"></div>
 <h6><span data-name=\"loudspeaker\" data-type=\"emoji\">📢</span> 音频</h6>
 <audio src=\"http://vjs.zencdn.net/v/oceans.mp4\" controls=\"true\"></audio>
 <h6 id="1739ed5e-f03c-4c2f-b763-37505601c935" data-toc-id="1739ed5e-f03c-4c2f-b763-37505601c935"><span data-name="video_camera" data-type="emoji">📹</span> 视频</h6>
