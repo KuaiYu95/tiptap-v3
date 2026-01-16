@@ -1,5 +1,6 @@
 export * from './AiWriting';
 export * from './ImeComposition';
+export * from './RemoveTrailingBreak';
 export * from './SlashCommands';
 export * from './StructuredDiff';
 

@@ -8,7 +8,7 @@ import { Markdown } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 import { PLACEHOLDER } from '../contants/placeholder';
 import { GetExtensionsProps } from '../type';
-import { AiWritingExtension, ImeComposition, SlashCommands, StructuredDiffExtension } from './extension';
+import { AiWritingExtension, ImeComposition, RemoveTrailingBreak, SlashCommands, StructuredDiffExtension } from './extension';
 import { CodeExtension } from './mark/Code';
 import Tooltip from './mark/Tooltip';
 import {
@@ -194,6 +194,10 @@ export const getExtensions = ({
   } else { // 只读模式
     if (!exclude?.includes('structuredDiff')) {
       defaultExtensions.push(StructuredDiffExtension)
+    }
+    // 在只读模式下移除末尾的空 paragraph 节点
+    if (!exclude?.includes('removeTrailingBreak')) {
+      defaultExtensions.push(RemoveTrailingBreak)
     }
   }
 
