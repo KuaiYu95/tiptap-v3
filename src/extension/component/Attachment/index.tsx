@@ -1,6 +1,5 @@
 import { ActionDropdown, FloatingPopover, HoverPopover } from "@ctzhian/tiptap/component";
 import { CarouselViewIcon, DeleteLineIcon, DownloadLineIcon, EditLineIcon, ScrollToBottomLineIcon } from "@ctzhian/tiptap/component/Icons";
-import { EyeLineIcon } from "@ctzhian/tiptap/component/Icons/eye-line-icon";
 import { ToolbarItem } from "@ctzhian/tiptap/component/Toolbar";
 import { EditorFnProps } from "@ctzhian/tiptap/type";
 import { Box, Button, Divider, Stack, TextField } from "@mui/material";
@@ -152,8 +151,8 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
           onClick={handleShowPopover}
         />
         <ToolbarItem
-          icon={isPdf ? <EyeLineIcon sx={{ fontSize: '1rem' }} /> : <DownloadLineIcon sx={{ fontSize: '1rem' }} />}
-          tip={isPdf ? '新标签页预览' : '下载'}
+          icon={<DownloadLineIcon sx={{ fontSize: '1rem' }} />}
+          tip={'下载'}
           onClick={handleDownload}
         />
         <Divider orientation='vertical' flexItem sx={{ height: '1rem', mx: 0.5, alignSelf: 'center', borderColor: 'divider' }} />

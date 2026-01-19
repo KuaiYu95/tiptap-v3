@@ -4,7 +4,7 @@ import { Editor as TiptapEditor } from '@tiptap/core';
 import React from 'react';
 import '../index.css';
 
-const EDITABLE = false;
+const EDITABLE = true;
 const DEFAULT_CONTENT_TYPE = 'html'
 const DEFAULT_HTML_CONTENT = `<p></p>
 <p>PandaWiki 是一款 <span data-tooltip="模型">AI</span> 大模<code>型驱动的开源知识库搭</code>建系统，F<strong>AQ 、 博客系统 ，借助大模型的力量为你提供 AI </strong>创作 、 AI 问答 、 AI 搜索 等能力。借<span style="color: rgb(90, 141, 218);">助大模型的</span><span style="background-color: rgb(255, 204, 188); color: rgb(90, 141, 218);">力量为你提</span><span style="color: rgb(90, 141, 218);">供 AI 创</span>作能力。PandaWiki 是<u>一款 AI 大模型驱动的开源知识库搭建系统，帮</u>助你快速构建智能化的 <s><u>产品文档、技术</u></s>文档、FAQ 、<s> 博客系统 ，借助大模型的</s>力量系统 ，<span style="background-color: rgb(172, 84, 84);">借助大模型的力量为你提供 AI 创作 、 AI 问</span>答 、 AI 搜索 等能力。的力量为<mark>你提供 AI 创作 、 AI 问答 、</mark> AI 搜索。</p>

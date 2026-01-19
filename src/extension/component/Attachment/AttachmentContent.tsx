@@ -133,6 +133,7 @@ export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, typ
                   component="a"
                   href={attrs.url}
                   target='_blank'
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <IconButton size="small"
                     sx={{
@@ -148,6 +149,7 @@ export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, typ
                   href={attrs.url}
                   target='_blank'
                   download={attrs.title}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <IconButton size="small"
                     sx={{
@@ -170,6 +172,7 @@ export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, typ
           download={attrs.title}
           {...(!editable && { 'data-title': attrs.title, 'data-type': attrs.type })}
           sx={inlineStyles}
+          onClick={(e) => e.stopPropagation()}
         >
           {editable ? (
             <Box component={'span'} sx={{
