@@ -18,25 +18,19 @@ interface AttachmentContentProps {
 export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, type, isPdf, editable = false }) => {
   const [isHovered, setIsHovered] = useState(false)
 
-  // 处理 PDF 预览（绕过 nginx 的 Content-Disposition 限制）
-  const handlePreview = async (e: React.MouseEvent) => {
+  const handlePreview = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     try {
-      const response = await fetch(attrs.url)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      // 在新标签页中预览 PDF
-      window.open(url, '_blank')
-      // 注意：不立即清理 URL，因为新标签页需要使用它
-      // 可以在一段时间后清理
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url)
-      }, 100)
+      const a = document.createElement('a')
+      a.href = attrs.url
+      a.target = '_blank'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
     } catch (error) {
       console.error('预览失败:', error)
-      // 降级：直接打开原始链接
       window.open(attrs.url, '_blank')
     }
   }
