@@ -17,6 +17,29 @@ interface AttachmentContentProps {
  */
 export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, type, isPdf, editable = false }) => {
   const [isHovered, setIsHovered] = useState(false)
+
+  // 处理文件下载
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    try {
+      const response = await fetch(attrs.url)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = attrs.title
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('下载失败:', error)
+      // 如果 fetch 失败，回退到直接打开链接
+      window.open(attrs.url, '_blank')
+    }
+  }
   const blockStyles = editable ? {
     display: 'flex',
     border: '1px solid',
@@ -129,50 +152,39 @@ export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, typ
                 {Number(attrs.size) > 0 && <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{attrs.size}</Box>}
               </Stack>
               {isHovered && <Stack direction={'row'} gap={0.5}>
-                {isPdf && <Box
+                {isPdf && <IconButton
+                  size="small"
                   component="a"
                   href={attrs.url}
                   target='_blank'
+                  rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
+                  sx={{
+                    color: attrs.url === 'error' ? 'error.main' : 'text.disabled',
+                    alignSelf: 'center',
+                  }}
                 >
-                  <IconButton size="small"
-                    sx={{
-                      color: attrs.url === 'error' ? 'error.main' : 'text.disabled',
-                      alignSelf: 'center',
-                    }}
-                  >
-                    <EyeLineIcon sx={{ fontSize: '1rem' }} />
-                  </IconButton>
-                </Box>}
-                <Box
-                  component="a"
-                  href={attrs.url}
-                  target='_blank'
-                  download={attrs.title}
-                  onClick={(e) => e.stopPropagation()}
+                  <EyeLineIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>}
+                <IconButton
+                  size="small"
+                  onClick={handleDownload}
+                  sx={{
+                    color: attrs.url === 'error' ? 'error.main' : 'text.disabled',
+                    alignSelf: 'center',
+                  }}
                 >
-                  <IconButton size="small"
-                    sx={{
-                      color: attrs.url === 'error' ? 'error.main' : 'text.disabled',
-                      alignSelf: 'center',
-                    }}
-                  >
-                    <Download2LineIcon sx={{ fontSize: '1rem' }} />
-                  </IconButton>
-                </Box>
+                  <Download2LineIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
               </Stack>}
             </Stack>
           </Box>
         )
       ) : (
         <Box
-          component="a"
-          href={attrs.url}
-          target='_blank'
-          download={attrs.title}
           {...(!editable && { 'data-title': attrs.title, 'data-type': attrs.type })}
           sx={inlineStyles}
-          onClick={(e) => e.stopPropagation()}
+          onClick={handleDownload}
         >
           {editable ? (
             <Box component={'span'} sx={{
