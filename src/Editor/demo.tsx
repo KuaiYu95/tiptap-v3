@@ -32,9 +32,12 @@ const DEFAULT_HTML_CONTENT = `<p></p>
 <a target=\"_blank\" type=\"block\" href=\"http://localhost:8000/components/editor\" title=\"看风景\">看风景</a>
 <h6>📎 附件</h6>
 <div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"谁是我们的敌人？谁是我们的朋友？这个问题是革命的首要问题。中国过去一切革命斗争成.txt\" data-size=\"18.27 KB\"></div>
-<p>行内附件：<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"font_4856251_qynqqohzdp.js\" data-size=\"412.34 KB\"></span><span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"雷池项目设计方案.docx\" data-size=\"635.74 KB\"></span></p>
-<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"b0f4a3e0-639f-4c09-ab33-ea9417939f87.tiff\" data-size=\"3.03 MB\"></div>
-<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pptx\" data-size=\"40.18 MB\"></div>
+<p>行内附件：
+<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg\" data-title=\"font_4856251_qynqqohzdp.js\" data-size=\"412.34 KB\"></span>
+<span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"雷池项目设计方案.pdf\" data-size=\"635.74 KB\"></span>
+</p>
+<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"b0f4a3e0-639f-4c09-ab33-ea9417939f87.pdf\" data-size=\"3.03 MB\"></div>
+<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-view=\"1\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pdf\" data-size=\"40.18 MB\"></div>
 <h6><span data-name=\"loudspeaker\" data-type=\"emoji\">📢</span> 音频</h6>
 <audio src=\"http://vjs.zencdn.net/v/oceans.mp4\" controls=\"true\"></audio>
 <h6 id="1739ed5e-f03c-4c2f-b763-37505601c935" data-toc-id="1739ed5e-f03c-4c2f-b763-37505601c935"><span data-name="video_camera" data-type="emoji">📹</span> 视频</h6>

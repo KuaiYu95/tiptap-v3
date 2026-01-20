@@ -13,6 +13,23 @@ export interface AttachmentAttributes {
   title: string
   type: string
   size: string
+  view?: string
+}
+
+/**
+ * 判断附件是否为 PDF 格式
+ */
+const isPdfFile = (attrs: AttachmentAttributes): boolean => {
+  const title = attrs.title?.toLowerCase() || ''
+  const type = attrs.type?.toLowerCase() || ''
+  const url = attrs.url?.toLowerCase() || ''
+
+  return (
+    title.endsWith('.pdf') ||
+    type.includes('pdf') ||
+    type === 'application/pdf' ||
+    url.includes('.pdf')
+  )
 }
 
 const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachmentType?: 'icon' | 'block' }> = ({
@@ -34,6 +51,8 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const attachmentContentRef = useRef<HTMLDivElement>(null)
 
+  const isPdf = isPdfFile(attrs)
+
   useEffect(() => {
     let title = attrs.title || ''
     setTitle(title.split('.').slice(0, -1).join('.'))
@@ -45,87 +64,112 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
   }
   const handleClosePopover = () => setAnchorEl(null)
 
-  const handleConvertAttachmentType = (newType: 'icon' | 'block') => {
-    if (attachmentDisplayType === 'block' && newType === 'icon') {
-      const pos = getPos()
-      if (typeof pos === 'number') {
-        editor.chain()
-          .focus()
-          .deleteRange({ from: pos, to: pos + node.nodeSize })
-          .insertContentAt(pos, {
-            type: 'inlineAttachment',
-            attrs: {
-              url: attrs.url,
-              title: attrs.title,
-              type: newType,
-              size: attrs.size,
-            }
-          })
-          .run()
-      }
-    } else if (attachmentDisplayType === 'icon' && newType === 'block') {
-      const pos = getPos()
-      if (typeof pos === 'number') {
-        editor.chain()
-          .focus()
-          .deleteRange({ from: pos, to: pos + node.nodeSize })
-          .insertContentAt(pos, {
-            type: 'blockAttachment',
-            attrs: {
-              url: attrs.url,
-              title: attrs.title,
-              type: newType,
-              size: attrs.size,
-            }
-          })
-          .run()
-      }
+  const handleConvertAttachmentType = (newType: 'icon' | 'block' | 'view') => {
+    const pos = getPos()
+    if (typeof pos !== 'number') return
+
+    const isBlockType = attachmentDisplayType === 'block'
+    const isInlineType = attachmentDisplayType === 'icon'
+    const isNewBlockType = newType === 'block' || newType === 'view'
+    const isNewInlineType = newType === 'icon'
+
+    if (isBlockType && isNewInlineType) {
+      editor.chain()
+        .focus()
+        .deleteRange({ from: pos, to: pos + node.nodeSize })
+        .insertContentAt(pos, {
+          type: 'inlineAttachment',
+          attrs: {
+            url: attrs.url,
+            title: attrs.title,
+            type: 'icon',
+            size: attrs.size,
+          }
+        })
+        .run()
+    } else if (isInlineType && isNewBlockType) {
+      editor.chain()
+        .focus()
+        .deleteRange({ from: pos, to: pos + node.nodeSize })
+        .insertContentAt(pos, {
+          type: 'blockAttachment',
+          attrs: {
+            url: attrs.url,
+            title: attrs.title,
+            type: 'block',
+            size: attrs.size,
+            view: newType === 'view' ? '1' : '0',
+          }
+        })
+        .run()
+    } else if (isBlockType && newType === 'view') {
+      updateAttributes?.({
+        view: '1',
+      })
+    } else if (isBlockType && newType === 'block' && attrs.view === '1') {
+      updateAttributes?.({
+        view: '0',
+      })
     }
   }
 
-  const renderOperationActions = () => (
-    <Stack
-      direction={'row'}
-      alignItems={'center'}
-      sx={{ p: 0.5 }}
-    >
-      <ToolbarItem
-        icon={<EditLineIcon sx={{ fontSize: '1rem' }} />}
-        tip='编辑'
-        onClick={handleShowPopover}
-      />
-      <ToolbarItem
-        icon={<DownloadLineIcon sx={{ fontSize: '1rem' }} />}
-        tip='下载'
-        onClick={handleDownload}
-      />
-      <Divider orientation='vertical' flexItem sx={{ height: '1rem', mx: 0.5, alignSelf: 'center', borderColor: 'divider' }} />
-      <ActionDropdown
-        id='attachment-type-dropdown'
-        selected={attachmentDisplayType}
-        list={[
-          {
-            key: 'icon',
-            label: '图标文字',
-            icon: <ScrollToBottomLineIcon sx={{ transform: 'rotate(90deg)', fontSize: '1rem' }} />,
-            onClick: () => handleConvertAttachmentType('icon'),
-          },
-          {
-            key: 'block',
-            label: '卡片',
-            icon: <CarouselViewIcon sx={{ transform: 'rotate(90deg)', fontSize: '1rem' }} />,
-            onClick: () => handleConvertAttachmentType('block'),
-          },
-        ]}
-      />
-      <Divider orientation='vertical' flexItem sx={{ height: '1rem', mx: 0.5, alignSelf: 'center', borderColor: 'divider' }} />
-      <ToolbarItem
-        icon={<DeleteLineIcon sx={{ fontSize: '1rem' }} />}
-        tip='删除'
-        onClick={handleDeleteAttachment}
-      />
-    </Stack>
-  )
+  const renderOperationActions = () => {
+    const typeOptions = [
+      {
+        key: 'icon',
+        label: '图标文字',
+        icon: <ScrollToBottomLineIcon sx={{ transform: 'rotate(90deg)', fontSize: '1rem' }} />,
+        onClick: () => handleConvertAttachmentType('icon'),
+      },
+      {
+        key: 'block',
+        label: '文字卡片',
+        icon: <CarouselViewIcon sx={{ transform: 'rotate(90deg)', fontSize: '1rem' }} />,
+        onClick: () => handleConvertAttachmentType('block'),
+      },
+    ]
+
+    // 只有 PDF 文件才显示预览卡片选项
+    if (isPdf) {
+      typeOptions.push({
+        key: 'view',
+        label: '预览卡片',
+        icon: <CarouselViewIcon sx={{ fontSize: '1rem' }} />,
+        onClick: () => handleConvertAttachmentType('view'),
+      })
+    }
+
+    return (
+      <Stack
+        direction={'row'}
+        alignItems={'center'}
+        sx={{ p: 0.5 }}
+      >
+        <ToolbarItem
+          icon={<EditLineIcon sx={{ fontSize: '1rem' }} />}
+          tip='编辑'
+          onClick={handleShowPopover}
+        />
+        <ToolbarItem
+          icon={<DownloadLineIcon sx={{ fontSize: '1rem' }} />}
+          tip={'下载'}
+          onClick={handleDownload}
+        />
+        <Divider orientation='vertical' flexItem sx={{ height: '1rem', mx: 0.5, alignSelf: 'center', borderColor: 'divider' }} />
+        <ActionDropdown
+          id='attachment-type-dropdown'
+          selected={attrs.view === '1' ? 'view' : attachmentDisplayType}
+          list={typeOptions}
+        />
+        <Divider orientation='vertical' flexItem sx={{ height: '1rem', mx: 0.5, alignSelf: 'center', borderColor: 'divider' }} />
+        <ToolbarItem
+          icon={<DeleteLineIcon sx={{ fontSize: '1rem' }} />}
+          tip='删除'
+          onClick={handleDeleteAttachment}
+        />
+      </Stack>
+    )
+  }
 
   const handleSave = () => {
     updateAttributes?.({
@@ -156,7 +200,12 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
       className={`attachment-wrapper ${attachmentDisplayType === 'block' ? 'block-attachment-wrapper' : ''}`}
       as={attachmentDisplayType === 'block' ? 'div' : 'span'}
     >
-      <AttachmentContent attrs={attrs} type={attachmentDisplayType} editable={false} />
+      <AttachmentContent
+        isPdf={isPdf}
+        attrs={attrs}
+        type={attachmentDisplayType === 'block' ? 'block' : 'icon'}
+        editable={false}
+      />
     </NodeViewWrapper>
   }
 
@@ -184,7 +233,7 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
           hoverDelay={500}
           placement="top"
         >
-          <AttachmentContent attrs={attrs} type={attachmentDisplayType} editable={true} />
+          <AttachmentContent isPdf={isPdf} attrs={attrs} type={attachmentDisplayType === 'block' ? 'block' : 'icon'} editable={true} />
         </HoverPopover>
       </div>
       <FloatingPopover

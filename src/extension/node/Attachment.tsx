@@ -24,6 +24,7 @@ declare module '@tiptap/core' {
         url: string
         title: string
         size: string
+        view?: '0' | '1'
       }) => ReturnType
     }
   }
@@ -79,6 +80,17 @@ export const InlineAttachmentExtension = (props: AttachmentExtensionProps) => No
           }
         },
       },
+      type: {
+        default: 'icon',
+        parseHTML: (element) => {
+          return element.getAttribute('data-type') || 'icon'
+        },
+        renderHTML: (attributes) => {
+          return {
+            'data-type': attributes.type || 'icon',
+          }
+        },
+      },
     }
   },
 
@@ -114,6 +126,7 @@ export const InlineAttachmentExtension = (props: AttachmentExtensionProps) => No
             url: href,
             title: title,
             size: '0',
+            type: 'icon',
           }
         }
       }
@@ -151,6 +164,7 @@ export const InlineAttachmentExtension = (props: AttachmentExtensionProps) => No
             url: options.url || '',
             title: options.title || '',
             size: options.size || '0',
+            type: 'icon',
           }
         })
       }
@@ -172,6 +186,17 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
 
   addAttributes() {
     return {
+      view: {
+        default: '0',
+        parseHTML: (element) => {
+          return element.getAttribute('data-view') || '0'
+        },
+        renderHTML: (attributes) => {
+          return {
+            'data-view': attributes.view,
+          }
+        },
+      },
       url: {
         default: '',
         parseHTML: element => withBaseUrl(
@@ -208,6 +233,17 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           }
         },
       },
+      type: {
+        default: 'block',
+        parseHTML: (element) => {
+          return element.getAttribute('data-type') || 'block'
+        },
+        renderHTML: (attributes) => {
+          return {
+            'data-type': attributes.type || 'block',
+          }
+        },
+      },
     }
   },
 
@@ -217,10 +253,13 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
         tag: 'div[data-tag="attachment"]',
         getAttrs: (dom) => {
           if (!(dom instanceof HTMLElement)) return false
+          const viewAttr = dom.getAttribute('data-view')
           return {
+            view: viewAttr !== null ? viewAttr : '0',
             url: dom.getAttribute('data-url') || '',
             title: dom.getAttribute('data-title') || '',
             size: dom.getAttribute('data-size') || '0',
+            type: dom.getAttribute('data-type') || 'block',
           }
         }
       },
@@ -230,6 +269,7 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           if (!(dom instanceof HTMLElement)) return false
           const download = dom.getAttribute('download')
           const type = dom.getAttribute('type')
+          const view = dom.getAttribute('data-view') || '0'
 
           // 只解析 type="block" 的带 download 的 <a> 标签
           if (download === null || type !== 'block') {
@@ -240,9 +280,11 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           const title = dom.textContent || dom.getAttribute('title') || dom.getAttribute('download') || ''
 
           return {
+            view: view,
             url: href,
             title: title,
             size: '0',
+            type: 'block',
           }
         }
       }
@@ -254,9 +296,9 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
   },
 
   renderMarkdown(node) {
-    const { url, title } = node.attrs as any
+    const { url, title, view } = node.attrs as any
     if (!url) return ''
-    return `<a href="${url}" type="block" target="_blank" download="${title}">${title}</a>`
+    return `<a href="${url}" data-view="${view}" type="block" target="_blank" download="${title}">${title}</a>`
   },
 
   addCommands() {
@@ -265,9 +307,11 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
         return commands.insertContent({
           type: this.name,
           attrs: {
+            view: options.view || '0',
             url: options.url || '',
             title: options.title || '',
             size: options.size || '0',
+            type: 'block',
           }
         })
       }
