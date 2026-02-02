@@ -19,25 +19,33 @@ export const FileHandlerExtension = (props: { onUpload?: UploadFunction }) => Fi
       return targetPos;
     };
 
+    const baseTime = Date.now();
+    const content = files.map((file, i) => {
+      const fileType = getFileType(file);
+      const tempId = `upload-${baseTime}-${i}`;
+      const isImage = fileType === 'image';
+      const progressNode = {
+        type: isImage ? 'inlineUploadProgress' : 'uploadProgress',
+        attrs: {
+          fileName: file.name,
+          fileType,
+          progress: 0,
+          tempId,
+        },
+      };
+      return isImage ? { type: 'paragraph', content: [progressNode] } : progressNode;
+    });
+
+    editor.chain().insertContentAt(pos, content).focus().run();
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileType = getFileType(file);
-      const tempId = `upload-${Date.now()}-${i}`;
-      const insertPosition = pos + i;
+      const tempId = `upload-${baseTime}-${i}`;
       const isImage = fileType === 'image';
       const progressNodeType = isImage ? 'inlineUploadProgress' : 'uploadProgress';
 
       try {
-        editor.chain().insertContentAt(insertPosition, {
-          type: progressNodeType,
-          attrs: {
-            fileName: file.name,
-            fileType,
-            progress: 0,
-            tempId,
-          },
-        }).focus().run();
-
         const progressPos = findNodePosition(progressNodeType, tempId);
 
         const url = await props.onUpload(file, (progressEvent) => {
