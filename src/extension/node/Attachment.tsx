@@ -25,6 +25,7 @@ declare module '@tiptap/core' {
         title: string
         size: string
         view?: '0' | '1'
+        height?: number
       }) => ReturnType
     }
   }
@@ -197,6 +198,18 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           }
         },
       },
+      height: {
+        default: 300,
+        parseHTML: (element) => {
+          const height = element.getAttribute('data-height')
+          return height ? parseInt(height, 10) : 300
+        },
+        renderHTML: (attributes) => {
+          return {
+            'data-height': attributes.height || 300,
+          }
+        },
+      },
       url: {
         default: '',
         parseHTML: element => withBaseUrl(
@@ -254,8 +267,10 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
         getAttrs: (dom) => {
           if (!(dom instanceof HTMLElement)) return false
           const viewAttr = dom.getAttribute('data-view')
+          const heightAttr = dom.getAttribute('data-height')
           return {
             view: viewAttr !== null ? viewAttr : '0',
+            height: heightAttr ? parseInt(heightAttr, 10) : 300,
             url: dom.getAttribute('data-url') || '',
             title: dom.getAttribute('data-title') || '',
             size: dom.getAttribute('data-size') || '0',
@@ -270,6 +285,7 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           const download = dom.getAttribute('download')
           const type = dom.getAttribute('type')
           const view = dom.getAttribute('data-view') || '0'
+          const heightAttr = dom.getAttribute('data-height')
 
           // 只解析 type="block" 的带 download 的 <a> 标签
           if (download === null || type !== 'block') {
@@ -281,6 +297,7 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
 
           return {
             view: view,
+            height: heightAttr ? parseInt(heightAttr, 10) : 300,
             url: href,
             title: title,
             size: '0',
@@ -296,9 +313,9 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
   },
 
   renderMarkdown(node) {
-    const { url, title, view } = node.attrs as any
+    const { url, title, view, height } = node.attrs as any
     if (!url) return ''
-    return `<a href="${url}" data-view="${view}" type="block" target="_blank" download="${title}">${title}</a>`
+    return `<a href="${url}" data-view="${view}" data-height="${height || 300}" type="block" target="_blank" download="${title}">${title}</a>`
   },
 
   addCommands() {
@@ -308,6 +325,7 @@ export const BlockAttachmentExtension = (props: AttachmentExtensionProps) => Nod
           type: this.name,
           attrs: {
             view: options.view || '0',
+            height: options.height || 300,
             url: options.url || '',
             title: options.title || '',
             size: options.size || '0',
