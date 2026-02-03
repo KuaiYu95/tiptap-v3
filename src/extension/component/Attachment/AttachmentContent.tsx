@@ -189,18 +189,18 @@ export const AttachmentContent: React.FC<AttachmentContentProps> = ({ attrs, typ
               }}
               {...(!editable && { 'data-title': attrs.title, 'data-type': type })}
             >
-            <iframe
-              src={attrs.url + '#navpanes=0&toolbar=1'}
-              width="100%"
-              height="100%"
-              allowFullScreen
-              style={{
-                border: 'none',
-                display: 'block',
-                pointerEvents: isDragging ? 'none' : 'auto',
-              }}
-              title={attrs.title}
-            />
+              <iframe
+                src={attrs.url + '#navpanes=0&toolbar=0&view=FitH'}
+                width="100%"
+                height="100%"
+                allowFullScreen
+                style={{
+                  border: 'none',
+                  display: 'block',
+                  pointerEvents: isDragging ? 'none' : 'auto',
+                }}
+                title={attrs.title}
+              />
             </Box>
             {editable && (isHovered || isDragging) && (
               <>

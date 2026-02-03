@@ -37,7 +37,7 @@ const DEFAULT_HTML_CONTENT = `<p></p>
 <span data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"雷池项目设计方案.pdf\" data-size=\"635.74 KB\"></span>
 </p>
 <div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-title=\"b0f4a3e0-639f-4c09-ab33-ea9417939f87.pdf\" data-size=\"3.03 MB\"></div>
-<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-view=\"1\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pdf\" data-size=\"40.18 MB\"></div>
+<div data-tag=\"attachment\" url=\"\" title=\"\" size=\"0\" data-url=\"https://pandawiki.dev.baizhi.cloud/static-file/95651441-d695-4e50-8086-2f5075dd8361/0150fbd1-a465-4082-b419-21e49cfd621e.pdf\" data-view=\"1\" data-height=\"444\" data-title=\"长亭科技公司介绍PPT-25.07.007_副本.pdf\" data-size=\"40.18 MB\"></div>
 <h6><span data-name=\"loudspeaker\" data-type=\"emoji\">📢</span> 音频</h6>
 <audio src=\"http://vjs.zencdn.net/v/oceans.mp4\" controls=\"true\"></audio>
 <h6 id="1739ed5e-f03c-4c2f-b763-37505601c935" data-toc-id="1739ed5e-f03c-4c2f-b763-37505601c935"><span data-name="video_camera" data-type="emoji">📹</span> 视频</h6>
