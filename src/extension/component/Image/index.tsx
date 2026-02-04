@@ -352,126 +352,145 @@ const ImageViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
         }
       >
         <Box
-          component={'span'}
-          ref={imageContentRef}
+          component="span"
           sx={{
-            position: 'relative',
-            display: 'inline-block',
+            display: 'inline-flex',
+            flexDirection: 'column',
+            alignItems: 'center',
           }}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
         >
-          <ImageViewerItem src={attrs.src}>
-            <img
-              ref={imageRef}
-              src={attrs.src}
-              width={attrs.width}
-              style={{
-                maxWidth: '100%',
-                height: 'auto',
-                cursor: isDragging ? 'default' : 'pointer',
-                border: '2px solid',
-                borderColor: (isHovering || isDragging) ? alpha(theme.palette.primary.main, 0.3) : 'transparent',
+          <Box
+            component={'span'}
+            ref={imageContentRef}
+            sx={{
+              position: 'relative',
+              display: 'inline-block',
+            }}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          >
+            <ImageViewerItem src={attrs.src}>
+              <img
+                ref={imageRef}
+                src={attrs.src}
+                width={attrs.width}
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  cursor: isDragging ? 'default' : 'pointer',
+                  border: '2px solid',
+                  borderColor: (isHovering || isDragging) ? alpha(theme.palette.primary.main, 0.3) : 'transparent',
+                  borderRadius: 'var(--mui-shape-borderRadius)',
+                  overflow: 'hidden',
+                }}
+                onClick={handleImageClick}
+                onError={(e) => {
+                  onError?.(e as unknown as Error)
+                }}
+              />
+            </ImageViewerItem>
+            {(isHovering || isDragging) && (
+              <>
+                {/* 左上角 */}
+                <Box
+                  onMouseDown={(e) => handleMouseDown(e, 'top-left')}
+                  sx={{
+                    position: 'absolute',
+                    left: -4,
+                    top: -4,
+                    width: 12,
+                    height: 12,
+                    bgcolor: 'background.default',
+                    cursor: 'nwse-resize',
+                    borderRadius: '50%',
+                    border: '2px solid',
+                    borderColor: (isDragging && dragCorner === 'top-left') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'background-color 0.2s ease',
+                  }}
+                />
+                {/* 右上角 */}
+                <Box
+                  onMouseDown={(e) => handleMouseDown(e, 'top-right')}
+                  sx={{
+                    position: 'absolute',
+                    right: -4,
+                    top: -4,
+                    width: 12,
+                    height: 12,
+                    bgcolor: 'background.default',
+                    cursor: 'nesw-resize',
+                    borderRadius: '50%',
+                    border: '2px solid',
+                    borderColor: (isDragging && dragCorner === 'top-right') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'background-color 0.2s ease',
+                  }}
+                />
+                {/* 左下角 */}
+                <Box
+                  onMouseDown={(e) => handleMouseDown(e, 'bottom-left')}
+                  sx={{
+                    position: 'absolute',
+                    left: -4,
+                    bottom: -2,
+                    width: 12,
+                    height: 12,
+                    cursor: 'nesw-resize',
+                    borderRadius: '50%',
+                    border: '2px solid',
+                    bgcolor: 'background.default',
+                    borderColor: (isDragging && dragCorner === 'bottom-left') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'background-color 0.2s ease',
+                  }}
+                />
+                {/* 右下角 */}
+                <Box
+                  onMouseDown={(e) => handleMouseDown(e, 'bottom-right')}
+                  sx={{
+                    position: 'absolute',
+                    right: -4,
+                    bottom: -2,
+                    width: 12,
+                    height: 12,
+                    bgcolor: 'background.default',
+                    cursor: 'nwse-resize',
+                    borderRadius: '50%',
+                    border: '2px solid',
+                    borderColor: (isDragging && dragCorner === 'bottom-right') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'background-color 0.2s ease',
+                  }}
+                />
+              </>
+            )}
+          </Box>
+          {attrs.title && (
+            <Box
+              component="span"
+              className="editor-image-title"
+              sx={{
+                display: 'block',
+                fontSize: '0.75rem',
+                color: 'text.tertiary',
+                textAlign: 'center',
+                width: '100%',
+                mt: 0.5,
               }}
-              onClick={handleImageClick}
-              onError={(e) => {
-                onError?.(e as unknown as Error)
-              }}
-            />
-          </ImageViewerItem>
-          {(isHovering || isDragging) && (
-            <>
-              {/* 左上角 */}
-              <Box
-                onMouseDown={(e) => handleMouseDown(e, 'top-left')}
-                sx={{
-                  position: 'absolute',
-                  left: -4,
-                  top: -4,
-                  width: 12,
-                  height: 12,
-                  bgcolor: 'background.default',
-                  cursor: 'nwse-resize',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: (isDragging && dragCorner === 'top-left') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                  transition: 'background-color 0.2s ease',
-                }}
-              />
-              {/* 右上角 */}
-              <Box
-                onMouseDown={(e) => handleMouseDown(e, 'top-right')}
-                sx={{
-                  position: 'absolute',
-                  right: -4,
-                  top: -4,
-                  width: 12,
-                  height: 12,
-                  bgcolor: 'background.default',
-                  cursor: 'nesw-resize',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: (isDragging && dragCorner === 'top-right') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                  transition: 'background-color 0.2s ease',
-                }}
-              />
-              {/* 左下角 */}
-              <Box
-                onMouseDown={(e) => handleMouseDown(e, 'bottom-left')}
-                sx={{
-                  position: 'absolute',
-                  left: -4,
-                  bottom: -2,
-                  width: 12,
-                  height: 12,
-                  cursor: 'nesw-resize',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  bgcolor: 'background.default',
-                  borderColor: (isDragging && dragCorner === 'bottom-left') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                  transition: 'background-color 0.2s ease',
-                }}
-              />
-              {/* 右下角 */}
-              <Box
-                onMouseDown={(e) => handleMouseDown(e, 'bottom-right')}
-                sx={{
-                  position: 'absolute',
-                  right: -4,
-                  bottom: -2,
-                  width: 12,
-                  height: 12,
-                  bgcolor: 'background.default',
-                  cursor: 'nwse-resize',
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: (isDragging && dragCorner === 'bottom-right') ? 'primary.main' : alpha(theme.palette.primary.main, 0.3),
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                  },
-                  transition: 'background-color 0.2s ease',
-                }}
-              />
-            </>
+            >
+              {attrs.title}
+            </Box>
           )}
         </Box>
-        {attrs.title && <>
-          <br />
-          <Box component='span' className="editor-image-title" sx={{
-            display: 'inline-block',
-            fontSize: '0.75rem',
-            color: 'text.tertiary',
-          }}>{attrs.title}</Box>
-        </>}
       </HoverPopover>
       <FloatingPopover
         open={Boolean(anchorEl)}
