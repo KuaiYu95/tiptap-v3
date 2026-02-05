@@ -1,6 +1,6 @@
 {
   "name": "@ctzhian/tiptap",
-  "version": "2.13.3",
+  "version": "2.13.5",
   "description": "基于 Tiptap 二次开发的编辑器组件",
   "main": "dist/index.js",
   "module": "dist/index.js",

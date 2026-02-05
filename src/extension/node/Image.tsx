@@ -1,44 +1,37 @@
 import { EditorFnProps } from "@ctzhian/tiptap/type";
 import { getFileType, removeBaseUrl, withBaseUrl } from "@ctzhian/tiptap/util";
+import type { JSONContent } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
+import { generateJSON } from "@tiptap/html";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { generateJSON } from "@tiptap/html";
-import type { JSONContent } from "@tiptap/core";
 import ImageViewWrapper, { getImageDimensionsFromFile } from "../component/Image";
 
 export type ImageExtensionProps = EditorFnProps & { baseUrl: string }
 
-/** 从 URL 下载图片并转换为 File 对象 */
 async function downloadImageAsFile(url: string, index: number): Promise<File | null> {
   try {
-    // console.log(`[下载] 开始下载图片 ${index + 1}: ${url.substring(0, 100)}`);
-    
-    // 尝试不带 credentials 下载
-    let response = await fetch(url, { 
+    let response = await fetch(url, {
       mode: 'cors',
       credentials: 'omit'
     });
-    
-    if (!response.ok) {
-      // console.warn(`[下载] 图片 ${index + 1} 直接下载失败 (${response.status})，尝试无限制模式`);
-      // 再试一次，允许跨域
+
+    if (!response.ok) { 
       response = await fetch(url, { mode: 'no-cors' });
       if (response.type === 'opaque') {
         console.error(`[图片下载] 图片 ${index + 1} 被CORS阻止，无法下载`);
         return null;
       }
     }
-    
+
     const blob = await response.blob();
     if (blob.size === 0) {
       console.error(`[图片下载] 图片 ${index + 1} blob为空`);
       return null;
     }
-    
+
     const fileName = `image-${index + 1}.${blob.type.split('/')[1] || 'png'}`;
     const file = new File([blob], fileName, { type: blob.type });
-    // console.log(`[下载] 图片 ${index + 1} 下载成功:`, { name: file.name, type: file.type, size: file.size });
     return file;
   } catch (error) {
     console.error(`[图片下载] 图片 ${index + 1} 下载异常:`, error);
@@ -170,10 +163,36 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
               .filter((file): file is File => file !== null && getFileType(file) === 'image');
 
             const htmlData = event.clipboardData?.getData('text/html');
-
-            // 提前声明变量和函数，避免在异步回调中出现 TDZ 错误
+            const plainText = event.clipboardData?.getData('text/plain');
             const { from, to } = view.state.selection;
             const editor = this.editor;
+
+            // 辅助函数：检查内容是否包含有效文本
+            const hasValidTextContent = (content: any[]): boolean => {
+              return content?.some((node: any) => {
+                if (node.type === 'text' || (node.text && node.text.trim())) {
+                  return true;
+                }
+                if (node.content && Array.isArray(node.content)) {
+                  return hasValidTextContent(node.content);
+                }
+                return false;
+              }) ?? false;
+            };
+
+            // 辅助函数：插入纯文本内容
+            const insertPlainText = (text: string) => {
+              event.preventDefault();
+              editor.chain().insertContentAt({ from, to }, {
+                type: 'doc',
+                content: [{
+                  type: 'paragraph',
+                  content: [{ type: 'text', text }]
+                }]
+              }).focus().run();
+            };
+
+
 
             // 定义辅助函数
             const findNodePosition = (typeName: string, tempId: string) => {
@@ -191,7 +210,7 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
             const uploadSingleImage = async (file: File, tempId: string) => {
               try {
                 const progressPos = findNodePosition('inlineUploadProgress', tempId);
-                
+
                 const url = await props.onUpload!(file, (progressEvent) => {
                   editor.chain().updateInlineUploadProgress(tempId, progressEvent.progress).focus().run();
                 });
@@ -244,7 +263,7 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
                 try {
                   const extensions = editor.extensionManager.extensions;
                   const parsed = generateJSON(htmlTrimmed, extensions);
-                  
+
                   if (!parsed?.content?.length) throw new Error('Empty parsed content');
 
                   const tempIds: string[] = [];
@@ -287,71 +306,85 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
               }
             };
 
-            // 如果没有 File 对象，尝试从 HTML 中提取图片 URL
-            let finalImageFiles = imageFiles;
-            if (imageFiles.length === 0 && htmlData) {
+            // 如果没有图片文件，尝试从 HTML 中提取图片 URL 或处理文本粘贴
+            if (imageFiles.length === 0) {
+              if (!htmlData) {
+                return false; // 没有 HTML 数据，让默认粘贴处理
+              }
+
               const imageUrls = extractImageUrls(htmlData);
-              
+
+              // 如果找到图片 URL，下载并处理图片
               if (imageUrls.length > 0) {
-                event.preventDefault(); // 阻止默认粘贴行为
-                
-                // 异步下载所有图片
+                event.preventDefault();
                 (async () => {
                   const downloadedFiles = await Promise.all(
                     imageUrls.map((url, i) => downloadImageAsFile(url, i))
                   );
                   const validFiles = downloadedFiles.filter((f): f is File => f !== null);
-                  
+
                   if (validFiles.length === 0) {
-                    // console.log('[图片粘贴] 下载失败，使用降级方案：保留原图URL');
-                    
-                    // 降级方案：直接粘贴原始HTML，使用原图URL
+                    // 下载失败：回退为直接粘贴原始 HTML（保留原始图片 URL）
                     try {
                       const extensions = editor.extensionManager.extensions;
                       const parsed = generateJSON(htmlData, extensions);
                       if (parsed?.content?.length) {
-                        editor.chain().insertContentAt({ from, to }, parsed).focus().run();
-                      } else {
-                        throw new Error('解析失败');
+                        editor
+                          .chain()
+                          .insertContentAt({ from, to }, parsed)
+                          .focus()
+                          .run();
                       }
                     } catch (error) {
-                      // 最后兜底：返回false让浏览器处理默认粘贴
-                      return;
+                      // 解析失败则不再处理，交给默认粘贴逻辑
                     }
                     return;
                   }
-                  
-                  // 使用下载的文件继续处理
+
                   await processImagePaste(validFiles, htmlData, from, to);
                 })();
-                
-                return true; // 已处理
-              } else {
-                return false;
+                return true;
               }
+
+              // 没有图片 URL，尝试处理 HTML 或纯文本
+              // 先尝试使用 generateJSON 解析 HTML
+              try {
+                const extensions = editor.extensionManager.extensions;
+                const parsed = generateJSON(htmlData, extensions);
+
+                // 检查解析后的内容是否包含有效文本
+                if (parsed?.content?.length && hasValidTextContent(parsed.content)) {
+                  event.preventDefault();
+                  editor.chain().insertContentAt({ from, to }, parsed).focus().run();
+                  return true;
+                }
+              } catch (error) {
+                // HTML 解析失败，继续尝试纯文本
+              }
+
+              // HTML 解析失败或内容无效（如包含特殊格式 data-clipboard-cangjie），使用纯文本
+              if (plainText?.trim()) {
+                insertPlainText(plainText.trim());
+                return true;
+              }
+
+              return false; // 让默认粘贴处理
             }
-            
-            if (imageFiles.length === 0) {
-              return false;
-            }
-            
-            if (htmlData && htmlData.trim().length > 0) {
+
+            // 有图片文件，直接处理
+            // 如果包含表格，让默认粘贴处理
+            if (htmlData?.trim()) {
               const htmlLower = htmlData.toLowerCase();
-              if (htmlLower.includes('<table') ||
-                htmlLower.includes('<tr') ||
-                htmlLower.includes('<td') ||
-                htmlLower.includes('<th')) {
+              if (htmlLower.includes('<table') || htmlLower.includes('<tr') ||
+                htmlLower.includes('<td') || htmlLower.includes('<th')) {
                 return false;
               }
             }
 
-            // 如果有 File 对象，直接处理
-            if (finalImageFiles.length > 0) {
-              (async () => {
-                await processImagePaste(finalImageFiles, htmlData, from, to);
-              })();
-            }
-
+            event.preventDefault();
+            (async () => {
+              await processImagePaste(imageFiles, htmlData, from, to);
+            })();
             return true;
           }
         }
