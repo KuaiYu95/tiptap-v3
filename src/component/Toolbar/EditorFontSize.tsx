@@ -21,7 +21,7 @@ const EditorFontSize = ({ editor }: EditorFontSizeProps) => {
       fontSize = fontSize * 4 / 3
     }
 
-    if (fontSize) {
+    if (fontSize && Options.includes(fontSize)) {
       setSelectedValue(fontSize);
       return;
     }

@@ -14,6 +14,7 @@ export interface AttachmentAttributes {
   type: string
   size: string
   view?: string
+  height?: number
 }
 
 /**
@@ -233,7 +234,13 @@ const AttachmentViewWrapper: React.FC<NodeViewProps & EditorFnProps & { attachme
           hoverDelay={500}
           placement="top"
         >
-          <AttachmentContent isPdf={isPdf} attrs={attrs} type={attachmentDisplayType === 'block' ? 'block' : 'icon'} editable={true} />
+          <AttachmentContent 
+            isPdf={isPdf} 
+            attrs={attrs} 
+            type={attachmentDisplayType === 'block' ? 'block' : 'icon'} 
+            editable={true}
+            updateAttributes={updateAttributes}
+          />
         </HoverPopover>
       </div>
       <FloatingPopover
