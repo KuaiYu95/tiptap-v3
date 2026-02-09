@@ -148,3 +148,35 @@ export const extractSrcFromIframe = (input: string): string => {
   }
   return trimmed
 }
+
+/**
+ * 将 B 站链接的 autoplay 统一为 0，避免默认自动播放
+ * - autoplay=1 改为 0
+ * - autoplay=0 不处理
+ * - 无 autoplay 参数则添加 &autoplay=0
+ * 支持协议相对地址（//player.bilibili.com/...），会先转为 https: 再解析
+ */
+export const normalizeBilibiliAutoplay = (url: string): string => {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  try {
+    // 处理协议相对地址（//player.bilibili.com/...）和相对路径
+    const urlToParse = trimmed.startsWith('//')
+      ? 'https:' + trimmed
+      : /^https?:\/\//i.test(trimmed)
+        ? trimmed
+        : 'https://' + trimmed
+    const u = new URL(urlToParse)
+    const host = u.hostname.toLowerCase()
+    if (!host.includes('bilibili.com') && !host.includes('b23.tv')) {
+      return trimmed
+    }
+    const autoplay = u.searchParams.get('autoplay')
+    if (autoplay !== '0') {
+      u.searchParams.set('autoplay', '0')
+    }
+    return u.toString()
+  } catch {
+    return trimmed
+  }
+}

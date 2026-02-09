@@ -1,7 +1,7 @@
 import { FloatingPopover } from "@ctzhian/tiptap/component/FloatingPopover"
 import { IframeTypeEnums } from "@ctzhian/tiptap/contants/enums"
 import { EditorFnProps } from "@ctzhian/tiptap/type"
-import { extractSrcFromIframe } from "@ctzhian/tiptap/util"
+import { extractSrcFromIframe, normalizeBilibiliAutoplay } from "@ctzhian/tiptap/util"
 import { Box, Button, Stack, TextField } from "@mui/material"
 import { NodeViewWrapper } from "@tiptap/react"
 import React, { useState } from "react"
@@ -21,7 +21,7 @@ type InsertIframeProps = {
 } & EditorFnProps
 
 const InsertIframe = ({ attrs, updateAttributes, onValidateUrl }: InsertIframeProps) => {
-  const [editUrl, setEditUrl] = useState(attrs.src || '')
+  const [editUrl, setEditUrl] = useState(attrs.src ?? '')
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
 
   const handleShowPopover = (event: React.MouseEvent<HTMLDivElement>) => setAnchorEl(event.currentTarget)
@@ -33,6 +33,9 @@ const InsertIframe = ({ attrs, updateAttributes, onValidateUrl }: InsertIframePr
       let validatedUrl = extractSrcFromIframe(editUrl)
       if (onValidateUrl) {
         validatedUrl = await Promise.resolve(onValidateUrl(validatedUrl, 'iframe'))
+      }
+      if (attrs.type === 'bilibili') {
+        validatedUrl = normalizeBilibiliAutoplay(validatedUrl)
       }
       updateAttributes({
         src: validatedUrl,

@@ -2,7 +2,7 @@ import { ActionDropdown, FloatingPopover, HoverPopover } from "@ctzhian/tiptap/c
 import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon, DeleteLineIcon, EditLineIcon } from "@ctzhian/tiptap/component/Icons"
 import { ToolbarItem } from "@ctzhian/tiptap/component/Toolbar"
 import { EditorFnProps } from "@ctzhian/tiptap/type"
-import { extractSrcFromIframe } from "@ctzhian/tiptap/util"
+import { extractSrcFromIframe, normalizeBilibiliAutoplay } from "@ctzhian/tiptap/util"
 import { alpha, Box, Button, Divider, Stack, TextField, useTheme } from "@mui/material"
 import { NodeViewProps, NodeViewWrapper } from '@tiptap/react'
 import React, { useCallback, useEffect, useRef, useState } from "react"
@@ -31,11 +31,12 @@ const IframeViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
   const dragStartWidthRef = useRef(0)
   const dragStartHeightRef = useRef(0)
   const maxWidthRef = useRef(0)
-  const [editSrc, setEditSrc] = useState(attrs.src)
+  const [editSrc, setEditSrc] = useState(attrs.src ?? '')
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [keepHoverPopoverOpen, setKeepHoverPopoverOpen] = useState(false)
 
   const handleShowPopover = () => {
+    setEditSrc(attrs.src ?? '')
     setKeepHoverPopoverOpen(true)
     setAnchorEl(editButtonRef.current)
   }
@@ -167,7 +168,7 @@ const IframeViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
   }, [])
 
   useEffect(() => {
-    setEditSrc(attrs.src)
+    setEditSrc(attrs.src ?? '')
   }, [attrs.src])
 
   useEffect(() => {
@@ -189,13 +190,15 @@ const IframeViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
         if (onValidateUrl) {
           validatedUrl = await Promise.resolve(onValidateUrl(validatedUrl, 'iframe'))
         }
+        if (attrs.type === 'bilibili') {
+          validatedUrl = normalizeBilibiliAutoplay(validatedUrl)
+        }
         updateAttributes({
           src: validatedUrl,
           width: attrs.width,
           height: attrs.height,
           align: attrs.align,
         })
-        setEditSrc(validatedUrl)
       } catch (error) {
         // 错误处理已经在 onValidateUrl 中处理
       }
