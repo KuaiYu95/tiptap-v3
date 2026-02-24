@@ -10,6 +10,7 @@ const useTiptap = ({
   onSave,
   onError,
   onUpload,
+  onUploadImgUrl,
   baseUrl = '',
   ...options
 }: UseTiptapProps & UseEditorOptions): UseTiptapReturn => {
@@ -19,12 +20,17 @@ const useTiptap = ({
       onUpload(file, onProgress, abortSignal).then((url) => withBaseUrl(url, baseUrl))
     : undefined
 
+  const handleUploadImgUrl = onUploadImgUrl
+    ? (url: string, abortSignal?: AbortSignal) =>
+      onUploadImgUrl(url, abortSignal).then((newUrl) => withBaseUrl(newUrl, baseUrl))
+    : undefined
 
   const extensions = getExtensions({
     editable,
     onError,
     baseUrl,
     onUpload: handleUpload,
+    onUploadImgUrl: handleUploadImgUrl,
     ...options
   })
 

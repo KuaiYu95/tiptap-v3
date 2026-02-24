@@ -59,6 +59,12 @@ export type UploadFunction = (
   abortSignal?: AbortSignal
 ) => Promise<string>
 
+/** 图片 URL 上传：将图片链接交由后端处理并返回新 URL，可随时通过 abortSignal 中止请求 */
+export type UploadImgUrlFunction = (
+  url: string,
+  abortSignal?: AbortSignal
+) => Promise<string>
+
 export type TipType = 'error' | 'success' | 'info' | 'warning'
 
 export type OnTipFunction = (type: TipType, tip: string) => void
@@ -94,6 +100,10 @@ export type EditorFnProps = {
    * 上传处理
    */
   onUpload?: UploadFunction
+  /**
+   * 图片链接上传：当为图片 URL 时，直接交由后端处理而非前端下载再上传
+   */
+  onUploadImgUrl?: UploadImgUrlFunction
   /**
    * 目录更新
    */

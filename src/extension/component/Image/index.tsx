@@ -76,6 +76,7 @@ const ImageViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
   deleteNode,
   selected,
   onUpload,
+  onUploadImgUrl,
   onError,
   onValidateUrl,
   getPos,
@@ -269,7 +270,7 @@ const ImageViewWrapper: React.FC<NodeViewProps & EditorFnProps> = ({
   }
 
   if (!attrs.src) {
-    return <InsertImage selected={selected} attrs={attrs} onUpload={onUpload} updateAttributes={updateAttributes} onError={onError} onValidateUrl={onValidateUrl} />
+    return <InsertImage selected={selected} attrs={attrs} onUpload={onUpload} onUploadImgUrl={onUploadImgUrl} updateAttributes={updateAttributes} onError={onError} onValidateUrl={onValidateUrl} />
   }
 
   if (isCropping) {

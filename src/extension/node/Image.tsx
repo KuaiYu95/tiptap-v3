@@ -145,6 +145,7 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
     return ReactNodeViewRenderer((renderProps) => ImageViewWrapper({
       ...renderProps,
       onUpload: props.onUpload,
+      onUploadImgUrl: props.onUploadImgUrl,
       onError: props.onError,
       onValidateUrl: props.onValidateUrl
     }))
@@ -155,7 +156,7 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
         key: new PluginKey('imagePasteHandler'),
         props: {
           handlePaste: (view, event) => {
-            if (!props.onUpload) return false;
+            if (!props.onUpload && !props.onUploadImgUrl) return false;
 
             const items = Array.from(event.clipboardData?.items || []);
             const imageFiles = items
@@ -306,7 +307,7 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
               }
             };
 
-            // 如果没有图片文件，尝试从 HTML 中提取图片 URL 或处理文本粘贴
+            // 如果没有图片文件，尝试从 HTML 中提取图片 URL
             if (imageFiles.length === 0) {
               if (!htmlData) {
                 return false; // 没有 HTML 数据，让默认粘贴处理
@@ -314,17 +315,64 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
 
               const imageUrls = extractImageUrls(htmlData);
 
-              // 如果找到图片 URL，下载并处理图片
+              // 如果找到图片 URL，优先通过 onUploadImgUrl 走后端上传，否则前端下载再上传
               if (imageUrls.length > 0) {
                 event.preventDefault();
                 (async () => {
+                  // 有 onUploadImgUrl 时，直接传 URL 给后端处理
+                  if (props.onUploadImgUrl) {
+                    const abortController = new AbortController();
+                    try {
+                      const newUrls = await Promise.all(
+                        imageUrls.map((url) => props.onUploadImgUrl!(url, abortController.signal))
+                      );
+                      let modifiedHtml = htmlData;
+                      imageUrls.forEach((oldUrl, i) => {
+                        modifiedHtml = modifiedHtml.split(oldUrl).join(newUrls[i]);
+                      });
+                      try {
+                        const extensions = editor.extensionManager.extensions;
+                        const parsed = generateJSON(modifiedHtml, extensions);
+                        if (parsed?.content?.length) {
+                          editor
+                            .chain()
+                            .insertContentAt({ from, to }, parsed)
+                            .focus()
+                            .run();
+                        }
+                      } catch (parseError) {
+                        console.error('[图片粘贴] 解析上传后的 HTML 失败:', parseError);
+                        props.onError?.(parseError as Error);
+                      }
+                    } catch (error) {
+                      console.error('[图片粘贴] URL 上传失败:', error);
+                      props.onError?.(error as Error);
+                      try {
+                        if (htmlData) {
+                          const extensions = editor.extensionManager.extensions;
+                          const parsed = generateJSON(htmlData, extensions);
+                          if (parsed?.content?.length) {
+                            editor
+                              .chain()
+                              .insertContentAt({ from, to }, parsed)
+                              .focus()
+                              .run();
+                          }
+                        }
+                      } catch (fallbackError) {
+                        // 解析失败则不再处理
+                      }
+                    }
+                    return;
+                  }
+
+                  // 无 onUploadImgUrl，走原有流程：前端下载再上传
                   const downloadedFiles = await Promise.all(
                     imageUrls.map((url, i) => downloadImageAsFile(url, i))
                   );
                   const validFiles = downloadedFiles.filter((f): f is File => f !== null);
 
                   if (validFiles.length === 0) {
-                    // 下载失败：回退为直接粘贴原始 HTML（保留原始图片 URL）
                     try {
                       const extensions = editor.extensionManager.extensions;
                       const parsed = generateJSON(htmlData, extensions);
@@ -335,8 +383,8 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
                           .focus()
                           .run();
                       }
-                    } catch (error) {
-                      // 解析失败则不再处理，交给默认粘贴逻辑
+                    } catch (err) {
+                      // 解析失败则不再处理
                     }
                     return;
                   }
@@ -349,14 +397,16 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
               // 没有图片 URL，尝试处理 HTML 或纯文本
               // 先尝试使用 generateJSON 解析 HTML
               try {
-                const extensions = editor.extensionManager.extensions;
-                const parsed = generateJSON(htmlData, extensions);
+                if (htmlData) {
+                  const extensions = editor.extensionManager.extensions;
+                  const parsed = generateJSON(htmlData, extensions);
 
-                // 检查解析后的内容是否包含有效文本
-                if (parsed?.content?.length && hasValidTextContent(parsed.content)) {
-                  event.preventDefault();
-                  editor.chain().insertContentAt({ from, to }, parsed).focus().run();
-                  return true;
+                  // 检查解析后的内容是否包含有效文本
+                  if (parsed?.content?.length && hasValidTextContent(parsed.content)) {
+                    event.preventDefault();
+                    editor.chain().insertContentAt({ from, to }, parsed).focus().run();
+                    return true;
+                  }
                 }
               } catch (error) {
                 // HTML 解析失败，继续尝试纯文本
@@ -371,7 +421,9 @@ const customImage = (props: ImageExtensionProps) => Image.extend({
               return false; // 让默认粘贴处理
             }
 
-            // 有图片文件，直接处理
+            // 有图片文件，直接处理（需要 onUpload）
+            if (imageFiles.length > 0 && !props.onUpload) return false;
+
             // 如果包含表格，让默认粘贴处理
             if (htmlData?.trim()) {
               const htmlLower = htmlData.toLowerCase();

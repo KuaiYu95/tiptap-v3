@@ -17,6 +17,7 @@ const InsertImage = ({
   attrs,
   updateAttributes,
   onUpload,
+  onUploadImgUrl,
   onError,
   onValidateUrl
 }: InsertImageProps) => {
@@ -84,13 +85,25 @@ const InsertImage = ({
   const handleInsertLink = async () => {
     if (!editSrc.trim()) return
     try {
-      let validatedUrl = editSrc.trim()
+      let finalUrl = editSrc.trim()
       if (onValidateUrl) {
-        validatedUrl = await Promise.resolve(onValidateUrl(validatedUrl, 'image'))
+        finalUrl = await Promise.resolve(onValidateUrl(finalUrl, 'image'))
       }
-      // 使用新的更新函数，自动获取图片宽度
-      await updateImageAttributes(validatedUrl, editTitle.trim())
-      handleClosePopover()
+      // 若为图片链接且有 onUploadImgUrl，交由后端上传并获取新 URL
+      if (onUploadImgUrl && (finalUrl.startsWith('http://') || finalUrl.startsWith('https://') || finalUrl.startsWith('//'))) {
+        setUploading(true)
+        handleClosePopover()
+        try {
+          const abortController = new AbortController()
+          finalUrl = await onUploadImgUrl(finalUrl, abortController.signal)
+          await updateImageAttributes(finalUrl, editTitle.trim())
+        } finally {
+          setUploading(false)
+        }
+      } else {
+        await updateImageAttributes(finalUrl, editTitle.trim())
+        handleClosePopover()
+      }
     } catch (error) {
       onError?.(error as Error)
     }
