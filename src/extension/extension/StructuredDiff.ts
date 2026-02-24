@@ -27,8 +27,13 @@ class DiffPluginState {
 
   apply(tr: any, value: DiffPluginState, oldState: any, newState: any): DiffPluginState {
     if (tr.docChanged && value.isActive) {
-      const mappedDecorations = value.decorations.map(tr.mapping, tr.doc);
-      return new DiffPluginState(mappedDecorations, value.diffs, value.isActive);
+      // 大范围替换时 mapping 可能失效，直接隐藏 diff 更安全
+      try {
+        const mappedDecorations = value.decorations.map(tr.mapping, tr.doc);
+        return new DiffPluginState(mappedDecorations, value.diffs, value.isActive);
+      } catch {
+        return new DiffPluginState(createEmptyDecorationSet(newState.doc), [], false);
+      }
     }
 
     const diffMeta = tr.getMeta(diffPluginKey);
@@ -91,11 +96,21 @@ export const StructuredDiffExtension = Extension.create({
     return {
       showStructuredDiff: (oldHtml, newHtml) => ({ tr, state, dispatch, editor }) => {
         try {
-          const extensions = editor.extensionManager.extensions
+          if (typeof oldHtml !== 'string' || typeof newHtml !== 'string') {
+            console.warn('StructuredDiff: oldHtml 和 newHtml 必须为字符串');
+            return false;
+          }
+          const extensions = editor?.extensionManager?.extensions;
+          if (!extensions?.length) {
+            console.warn('StructuredDiff: 未找到扩展配置');
+            return false;
+          }
           const comparison = compareDocuments(oldHtml, newHtml, extensions);
 
           if (!comparison.hasChanges) {
-            return false;
+            const hideTr = tr.setMeta(diffPluginKey, { type: 'hideDiff' });
+            if (dispatch) dispatch(hideTr);
+            return true;
           }
 
           const decorations = createDecorationsFromDiffs(comparison.diffs, state.doc);

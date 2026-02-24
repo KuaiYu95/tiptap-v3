@@ -51,7 +51,11 @@ export interface ProseMirrorNode {
  * @returns {Object} ProseMirror文档对象
  */
 export function parseHtmlToDoc(html: string, extensions: Extensions): any {
-  return generateJSON(html, extensions);
+  const input = typeof html === 'string' ? html : '';
+  if (!extensions?.length) {
+    throw new Error('parseHtmlToDoc: extensions 不能为空');
+  }
+  return generateJSON(input, extensions);
 }
 
 function haveSameMarks(a?: Array<{ type: string; attrs?: Record<string, any> }>, b?: Array<{ type: string; attrs?: Record<string, any> }>): boolean {
@@ -454,9 +458,10 @@ function lcsAlign<T>(a: T[], b: T[], equals: (x: T, y: T) => boolean): Array<[nu
 export function compareDocuments(oldHtml: string, newHtml: string, extensions: Extensions): DocumentComparison {
   const docA = parseHtmlToDoc(oldHtml, extensions);
   const docB = parseHtmlToDoc(newHtml, extensions);
-
+  if (!docA || !docB) {
+    return { oldDoc: docA, newDoc: docB, diffs: [], hasChanges: false };
+  }
   const diffs = compareNodes(docA, docB);
-
   return {
     oldDoc: docA,
     newDoc: docB,

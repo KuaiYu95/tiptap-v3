@@ -79,6 +79,16 @@ function extractTextFromNode(node: ProseMirrorNode): string {
   return '';
 }
 
+function isInDocRange(from: number, to: number, doc: PMNode): boolean {
+  const docSize = (doc as any).nodeSize ?? 0;
+  return from >= 0 && to > from && to <= docSize;
+}
+
+function isValidWidgetPos(pos: number, doc: PMNode): boolean {
+  const docSize = (doc as any).nodeSize ?? 0;
+  return pos >= 0 && pos <= docSize;
+}
+
 /**
  * 根据差异数组创建装饰集合
  * @param {Array} diffs - 差异数组
@@ -100,28 +110,34 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
             const base = adjustBaseForInline(pmNodeAtPath, pos);
             const from = base + mapInlineOffsetToPM(pmNodeAtPath, diff.textDiff.offset);
             const to = base + mapInlineOffsetToPM(pmNodeAtPath, diff.textDiff.offset + diff.textDiff.length);
-            decorations.push(createInsertDecoration(from, to));
+            if (isInDocRange(from, to, doc)) {
+              decorations.push(createInsertDecoration(from, to));
+            }
           } else if (diff.node) {
             // 节点级别的插入
             if (pmNodeAtPath) {
               if ((pmNodeAtPath as any).isText && ((pmNodeAtPath as any).text?.length || 0) > 0) {
                 const from = pos;
                 const to = pos + (((pmNodeAtPath as any).text?.length) || 0);
-                decorations.push(createInsertDecoration(from, to));
+                if (isInDocRange(from, to, doc)) {
+                  decorations.push(createInsertDecoration(from, to));
+                }
               } else {
                 const from = pos;
                 const to = pos + (pmNodeAtPath as any).nodeSize;
-                decorations.push(Decoration.node(from, to, {
-                  class: 'diff-insert-highlight',
-                  style: 'background-color: rgba(40,167,69,0.12); border-radius: 3px; border: 1px dashed #28a745;'
-                }));
+                if (isInDocRange(from, to, doc)) {
+                  decorations.push(Decoration.node(from, to, {
+                    class: 'diff-insert-highlight',
+                    style: 'background-color: rgba(40,167,69,0.12); border-radius: 3px; border: 1px dashed #28a745;'
+                  }));
+                }
               }
             } else {
               // 回退到基于 JSON 节点的估算
               const nodeSize = getNodeSize(diff.node);
               const from = pos + 1;
               const to = pos + nodeSize - 1;
-              if (to > from) {
+              if (to > from && isInDocRange(from, to, doc)) {
                 decorations.push(createInsertDecoration(from, to));
               }
             }
@@ -133,13 +149,17 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
             // 文本级别的删除 - 使用widget显示
             const base = adjustBaseForInline(pmNodeAtPath, pos);
             const widgetPos = base + mapInlineOffsetToPM(pmNodeAtPath, diff.textDiff.offset);
-            decorations.push(createDeleteWidget(widgetPos, {
-              type: 'text',
-              text: diff.textDiff.text
-            }));
+            if (isValidWidgetPos(widgetPos, doc)) {
+              decorations.push(createDeleteWidget(widgetPos, {
+                type: 'text',
+                text: diff.textDiff.text
+              }));
+            }
           } else if (diff.node) {
             // 节点级别的删除 - 使用widget显示
-            decorations.push(createDeleteWidget(pos, diff.node));
+            if (isValidWidgetPos(pos, doc)) {
+              decorations.push(createDeleteWidget(pos, diff.node));
+            }
           }
           break;
 
@@ -150,14 +170,17 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
               const base = adjustBaseForInline(pmNodeAtPath, pos);
               const from = base + mapInlineOffsetToPM(pmNodeAtPath, diff.attrChange.fromOffset);
               const to = base + mapInlineOffsetToPM(pmNodeAtPath, diff.attrChange.toOffset);
-              if (to > from) {
+              if (to > from && isInDocRange(from, to, doc)) {
                 decorations.push(createModifyDecoration(from, to));
               }
             } else if (diff.attrChange.key === 'marks' && pmNodeAtPath && (pmNodeAtPath as any).isText) {
               const textLength = (pmNodeAtPath as any).text ? (pmNodeAtPath as any).text.length : 0;
               if (textLength > 0) {
                 const base = adjustBaseForInline(pmNodeAtPath, pos);
-                decorations.push(createModifyDecoration(base, base + textLength));
+                const to = base + textLength;
+                if (isInDocRange(base, to, doc)) {
+                  decorations.push(createModifyDecoration(base, to));
+                }
               }
             } else {
               // 其他属性修改 - 节点级高亮
@@ -167,10 +190,12 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
                 const nodeSize = getPMNodeSizeAtPath(diff.path, doc);
                 const from = pos;
                 const to = pos + nodeSize;
-                decorations.push(Decoration.node(from, to, {
-                  class: 'diff-modify-highlight',
-                  style: 'background-color: rgba(255,193,7,0.12); border-radius: 3px; border: 1px dashed #856404;'
-                }));
+                if (isInDocRange(from, to, doc)) {
+                  decorations.push(Decoration.node(from, to, {
+                    class: 'diff-modify-highlight',
+                    style: 'background-color: rgba(255,193,7,0.12); border-radius: 3px; border: 1px dashed #856404;'
+                  }));
+                }
               }
             }
           }
