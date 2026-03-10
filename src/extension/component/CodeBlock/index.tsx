@@ -15,7 +15,7 @@ interface CodeBlockAttributes {
 }
 
 const CodeBlockView: React.FC<NodeViewProps> = (props) => {
-  const { node, updateAttributes, selected, editor } = props;
+  const { node, updateAttributes, selected, editor, getPos } = props;
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [copyText, setCopyText] = useState('复制');
   const [titleValue, setTitleValue] = useState(node.attrs.title || '');
@@ -106,10 +106,31 @@ const CodeBlockView: React.FC<NodeViewProps> = (props) => {
     return <ReadonlyCodeBlock {...props} />;
   }
 
+  const handleWrapperCopy = useCallback(
+    (event: React.ClipboardEvent<HTMLElement>) => {
+      const { state } = editor;
+      const { selection } = state;
+      const { $from, $to, empty } = selection;
+      if (empty) return;
+      const pos = typeof getPos === 'function' ? getPos() : undefined;
+      if (pos === undefined) return;
+      const nodeStart = pos + 1;
+      const nodeEnd = pos + node.nodeSize - 1;
+      if ($from.pos < nodeStart || $to.pos > nodeEnd) return;
+      const selectedText = state.doc.textBetween($from.pos, $to.pos, '\n');
+      event.clipboardData.clearData();
+      event.clipboardData.setData('text/plain', selectedText);
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [editor, node, getPos],
+  );
+
   return (
     <NodeViewWrapper
       className={`codeblock-wrapper ${selected ? 'ProseMirror-selectednode' : ''}`}
       data-drag-handle
+      onCopy={handleWrapperCopy}
     >
       <Box sx={{
         position: 'relative',

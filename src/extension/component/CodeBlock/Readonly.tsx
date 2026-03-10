@@ -10,12 +10,34 @@ interface CodeBlockAttributes {
 
 const ReadonlyCodeBlock: React.FC<NodeViewProps> = memo(({
   node,
-  selected
+  selected,
+  editor,
+  getPos,
 }) => {
   const [copyText, setCopyText] = useState('复制');
   const [isHovering, setIsHovering] = useState(false);
 
   const attrs = node.attrs as CodeBlockAttributes;
+
+  const handleWrapperCopy = useCallback(
+    (event: React.ClipboardEvent<HTMLElement>) => {
+      const { state } = editor;
+      const { selection } = state;
+      const { $from, $to, empty } = selection;
+      if (empty) return;
+      const pos = typeof getPos === 'function' ? getPos() : undefined;
+      if (pos === undefined) return;
+      const nodeStart = pos + 1;
+      const nodeEnd = pos + node.nodeSize - 1;
+      if ($from.pos < nodeStart || $to.pos > nodeEnd) return;
+      const selectedText = state.doc.textBetween($from.pos, $to.pos, '\n');
+      event.clipboardData.clearData();
+      event.clipboardData.setData('text/plain', selectedText);
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [editor, node, getPos],
+  );
 
   const handleCopy = useCallback(
     async (event: React.MouseEvent<HTMLDivElement>) => {
@@ -42,6 +64,7 @@ const ReadonlyCodeBlock: React.FC<NodeViewProps> = memo(({
       data-drag-handle
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
+      onCopy={handleWrapperCopy}
     >
       <Box sx={{
         position: 'relative',
