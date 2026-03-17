@@ -1,22 +1,30 @@
 ---
 hero:
-  title: library
-  description: A react library developed with dumi
+  title: Tiptap Editor
+  description: Demo navigation for the editor playground.
   actions:
-    - text: Hello
-      link: /
-    - text: World
-      link: /
+    - text: Editor Demo
+      link: /editor
+    - text: Markdown Demo
+      link: /editor-markdown
+    - text: Diff Demo
+      link: /editor-diff
 features:
-  - title: Hello
-    emoji: 💎
-    description: Put hello description here
-  - title: World
-    emoji: 🌈
-    description: Put world description here
-  - title: '!'
-    emoji: 🚀
-    description: Put ! description here
+  - title: Editor
+    emoji: 📝
+    description: Main Tiptap editor demo with toolbar, table, media, and drag handle interactions.
+  - title: EditorDiff
+    emoji: 🔍
+    description: Diff-mode demo for comparing editor content.
+  - title: EditorMarkdown
+    emoji: #️⃣
+    description: Markdown editing and preview demo.
 ---
 
-@ctzhian/tiptap
+tiptap
+
+## Demos
+
+- [Editor](/editor)
+- [EditorDiff](/editor-diff)
+- [EditorMarkdown](/editor-markdown)

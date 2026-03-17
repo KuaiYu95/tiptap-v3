@@ -1,11 +1,10 @@
-export * from './component/Icons';
-export { default as Editor } from './Editor';
-export { default as EditorDiff } from './EditorDiff';
-export { default as EditorMarkdown, type MarkdownEditorRef } from './EditorMarkdown';
-export { default as EditorThemeProvider } from './EditorThemeProvider';
-export { default as EditorToolbar } from './EditorToolbar';
-export { getExtensions } from './extension';
-export { default as useTiptap } from './hook';
-export { useFn } from './hook/fn';
-export * from './type';
-
+export * from './components/Icons';
+export { default as Editor } from './app/editor/Editor';
+export { default as EditorDiff } from './app/editor/EditorDiff';
+export { default as EditorMarkdown, type MarkdownEditorRef } from './app/editor/EditorMarkdown';
+export { default as EditorThemeProvider } from './app/editor/EditorThemeProvider';
+export { default as EditorToolbar } from './features/toolbar';
+export { getExtensions } from './editor-core/extensions';
+export { default as useTiptap } from './hooks';
+export { useFn } from './hooks/fn';
+export * from './types';

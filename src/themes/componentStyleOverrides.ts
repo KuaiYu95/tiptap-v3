@@ -1,4 +1,4 @@
-import { addOpacityToColor } from '../util';
+import { addOpacityToColor } from '../utils';
 import { type ThemeColor } from './color';
 export default function componentStyleOverrides(color: ThemeColor) {
   return {
