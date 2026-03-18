@@ -117,6 +117,10 @@ const { editor } = useTiptap({
 以只读方式展示两段 HTML 的结构化差异。
 
 - Props：`{ oldHtml: string; newHtml: string }`
+- 可选增强：支持 `diffOptions`，例如通过 `ignoreAttrs` 忽略节点或 mark 上的指定属性差异，或通过 `engine: 'enhanced'` 为特殊 inline block 和重排场景启用更细粒度的 diff；未传时默认行为保持不变。
+- 兼容性：现有接入方式无需调整，`v3.x` 内默认仍保持零配置升级。
+- 当前定位：只读结构化 diff 展示，不等同于修订模式或 track changes。
+- 本轮优化：自动清理“无差异时残留高亮”，并增强图片、附件、公式、音视频等删除节点的预览文案。
 
 ```tsx
 <EditorDiff oldHtml={'<p>old</p>'} newHtml={'<p><strong>new</strong></p>'} />

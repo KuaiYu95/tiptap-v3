@@ -1,6 +1,6 @@
 {
   "name": "@ctzhian/tiptap",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "基于 Tiptap 二次开发的编辑器组件",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -14,6 +14,7 @@
     "docs:preview": "dumi preview",
     "prepare": "husky install && dumi setup",
     "doctor": "father doctor",
+    "test:smoke": "pnpm build && node --loader ./test/esm-loader.mjs --test test/*.test.mjs",
     "lint": "npm run lint:es && npm run lint:css",
     "lint:css": "stylelint \"{src,test}/**/*.{css,less}\"",
     "lint:es": "eslint \"{src,test}/**/*.{js,jsx,ts,tsx}\"",

@@ -66,6 +66,7 @@ export const getExtensions = ({
   mermaidOptions,
   youtubeOptions,
   tableOfContentsOptions,
+  structuredDiffOptions,
 }: GetExtensionsProps) => {
   const defaultExtensions: any = [
     ImeComposition,
@@ -195,7 +196,7 @@ export const getExtensions = ({
     }
   } else { // 只读模式
     if (!exclude?.includes('structuredDiff')) {
-      defaultExtensions.push(StructuredDiffExtension)
+      defaultExtensions.push(StructuredDiffExtension.configure(structuredDiffOptions || {}))
     }
   }
 

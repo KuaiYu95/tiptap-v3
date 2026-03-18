@@ -2,6 +2,7 @@ import { EditorContent } from "@tiptap/react"
 import React, { useEffect } from "react"
 import { ImageViewerProvider } from "../component/ImageViewer"
 import useTiptap from "../hook"
+import type { StructuredDiffOptions } from "../util/structuredDiff"
 
 // fix: https://github.com/ueberdosis/tiptap/issues/6785
 import 'core-js/actual/array/find-last'
@@ -10,17 +11,20 @@ interface EditorDiffProps {
   oldHtml: string
   newHtml: string
   baseUrl?: string
+  diffOptions?: Partial<StructuredDiffOptions>
 }
 
 const EditorDiff = ({
   oldHtml,
   newHtml,
-  baseUrl
+  baseUrl,
+  diffOptions
 }: EditorDiffProps) => {
   const editorRef = useTiptap({
     editable: false,
     content: newHtml,
     baseUrl,
+    structuredDiffOptions: diffOptions,
     exclude: ['youtube', 'mention',]
   })
 

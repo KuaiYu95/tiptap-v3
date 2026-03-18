@@ -4,8 +4,10 @@ import { TableOfContentsOptions } from '@tiptap/extension-table-of-contents';
 import { YoutubeOptions } from '@tiptap/extension-youtube';
 import { UseEditorOptions } from '@tiptap/react';
 import { MermaidConfig } from 'mermaid';
+import type { StructuredDiffOptions } from '../util/structuredDiff';
 
 export type { Editor } from '@tiptap/react';
+export type { StructuredDiffEngine, StructuredDiffOptions } from '../util/structuredDiff';
 
 export interface MenuItem {
   label?: React.ReactNode;
@@ -128,6 +130,7 @@ export type NodeOrMetaOrSuggestionOrExtensionOptions = {
   mermaidOptions?: Partial<MermaidConfig>
   youtubeOptions?: Partial<YoutubeOptions>
   tableOfContentsOptions?: Partial<TableOfContentsOptions>
+  structuredDiffOptions?: Partial<StructuredDiffOptions>
 }
 
 export type BaseExtensionOptions = {

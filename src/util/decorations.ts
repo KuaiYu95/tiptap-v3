@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import { Node as PMNode } from '@tiptap/pm/model';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { DiffItem, pathToPos, ProseMirrorNode } from './structuredDiff';
+import { pathToPos } from './structuredDiff';
+import type { DiffItem, ProseMirrorNode, StructuredDiffOptions } from './structuredDiff';
 
 /**
  * 创建插入内容的装饰
@@ -34,7 +36,11 @@ function createModifyDecoration(from: number, to: number): Decoration {
  * @param {Object} deletedNode - 被删除的节点
  * @returns {Decoration} widget装饰对象
  */
-function createDeleteWidget(pos: number, deletedNode: ProseMirrorNode): Decoration {
+function createDeleteWidget(
+  pos: number,
+  deletedNode: ProseMirrorNode,
+  options?: StructuredDiffOptions
+): Decoration {
   const widget = document.createElement('span');
   widget.className = 'diff-delete-widget';
   widget.style.cssText = `
@@ -49,7 +55,7 @@ function createDeleteWidget(pos: number, deletedNode: ProseMirrorNode): Decorati
   `;
 
   // 提取删除内容的文本
-  const deletedText = extractTextFromNode(deletedNode);
+  const deletedText = getDeletedNodePreviewText(deletedNode, options);
   widget.textContent = deletedText || '[已删除]';
 
   // 添加工具提示
@@ -58,6 +64,53 @@ function createDeleteWidget(pos: number, deletedNode: ProseMirrorNode): Decorati
   return Decoration.widget(pos, widget, {
     side: 1
   });
+}
+
+function normalizePreviewText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  return '';
+}
+
+function truncatePreviewText(text: string, maxLength: number = 60): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 1)}...`;
+}
+
+function getFileNameFromUrl(url: string): string {
+  const normalizedUrl = normalizePreviewText(url);
+
+  if (!normalizedUrl) {
+    return '';
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedUrl, 'https://placeholder.local');
+    const segments = parsedUrl.pathname.split('/').filter(Boolean);
+    return decodeURIComponent(segments[segments.length - 1] || '');
+  } catch {
+    const segments = normalizedUrl.split('/').filter(Boolean);
+    return segments[segments.length - 1] || normalizedUrl;
+  }
+}
+
+function formatDeletedNodeLabel(typeLabel: string, detail?: string): string {
+  const normalizedDetail = normalizePreviewText(detail);
+
+  if (!normalizedDetail) {
+    return `[已删除${typeLabel}]`;
+  }
+
+  return `[已删除${typeLabel}: ${truncatePreviewText(normalizedDetail)}]`;
 }
 
 /**
@@ -79,13 +132,76 @@ function extractTextFromNode(node: ProseMirrorNode): string {
   return '';
 }
 
+export function getDeletedNodePreviewText(node: ProseMirrorNode, options?: StructuredDiffOptions): string {
+  if (!node) {
+    return '';
+  }
+
+  const customPreview = normalizePreviewText(options?.nodePreviewSerializer?.(node));
+
+  if (customPreview) {
+    return truncatePreviewText(customPreview);
+  }
+
+  const textContent = truncatePreviewText(normalizePreviewText(extractTextFromNode(node)));
+
+  if (textContent) {
+    return textContent;
+  }
+
+  const attrs = node.attrs || {};
+  const nodeType = node.type || 'content';
+  const namedDetail = (value?: unknown, fallback?: unknown) => {
+    const detail = normalizePreviewText(value) || normalizePreviewText(fallback);
+    return detail || '';
+  };
+
+  switch (nodeType) {
+    case 'image':
+      return formatDeletedNodeLabel('图片', namedDetail(attrs.alt, attrs.src && getFileNameFromUrl(attrs.src)));
+    case 'inlineAttachment':
+    case 'blockAttachment':
+      return formatDeletedNodeLabel('附件', namedDetail(attrs.title, attrs.url && getFileNameFromUrl(attrs.url)));
+    case 'video':
+      return formatDeletedNodeLabel('视频', namedDetail(attrs.title, attrs.src && getFileNameFromUrl(attrs.src)));
+    case 'audio':
+      return formatDeletedNodeLabel('音频', namedDetail(attrs.title, attrs.src && getFileNameFromUrl(attrs.src)));
+    case 'iframe':
+      return formatDeletedNodeLabel('嵌入内容', namedDetail(attrs.title, attrs.src));
+    case 'inlineMath':
+      return formatDeletedNodeLabel('行内公式', attrs.latex);
+    case 'blockMath':
+      return formatDeletedNodeLabel('公式', attrs.latex);
+    case 'inlineLink':
+    case 'blockLink':
+      return formatDeletedNodeLabel('链接', namedDetail(attrs.title, attrs.href));
+    case 'details':
+      return formatDeletedNodeLabel('折叠块');
+    case 'detailsSummary':
+      return formatDeletedNodeLabel('折叠标题');
+    case 'detailsContent':
+      return formatDeletedNodeLabel('折叠内容');
+    case 'table':
+      return formatDeletedNodeLabel('表格');
+    case 'codeBlock':
+    case 'code_block':
+      return formatDeletedNodeLabel('代码块', attrs.language || attrs.lang);
+    default:
+      return formatDeletedNodeLabel('内容');
+  }
+}
+
 /**
  * 根据差异数组创建装饰集合
  * @param {Array} diffs - 差异数组
  * @param {Object} doc - ProseMirror文档
  * @returns {DecorationSet} 装饰集合
  */
-export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): DecorationSet {
+export function createDecorationsFromDiffs(
+  diffs: DiffItem[],
+  doc: PMNode,
+  options?: StructuredDiffOptions
+): DecorationSet {
   const decorations: Decoration[] = [];
 
   diffs.forEach(diff => {
@@ -136,10 +252,10 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
             decorations.push(createDeleteWidget(widgetPos, {
               type: 'text',
               text: diff.textDiff.text
-            }));
+            }, options));
           } else if (diff.node) {
             // 节点级别的删除 - 使用widget显示
-            decorations.push(createDeleteWidget(pos, diff.node));
+            decorations.push(createDeleteWidget(pos, diff.node, options));
           }
           break;
 
@@ -181,26 +297,6 @@ export function createDecorationsFromDiffs(diffs: DiffItem[], doc: PMNode): Deco
     }
   });
   return DecorationSet.create(doc, decorations);
-}
-
-/**
- * 获取指定路径节点的大小
- * @param {Array} path - 节点路径
- * @param {Object} doc - ProseMirror文档
- * @returns {number} 节点大小
- */
-function getNodeSizeAtPath(path: number[], doc: any): number {
-  let currentNode = doc;
-
-  for (const index of path) {
-    if (currentNode.content && currentNode.content[index]) {
-      currentNode = currentNode.content[index];
-    } else {
-      return 1; // 默认大小
-    }
-  }
-
-  return getNodeSize(currentNode);
 }
 
 function getPMNodeAtPath(path: number[], doc: PMNode): PMNode | null {

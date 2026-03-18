@@ -1,4 +1,5 @@
-import { Extensions } from '@tiptap/core';
+/* eslint-disable @typescript-eslint/no-use-before-define */
+import type { Extensions } from '@tiptap/core';
 import { generateJSON } from '@tiptap/html';
 import DiffMatchPatch from 'diff-match-patch';
 
@@ -44,6 +45,88 @@ export interface ProseMirrorNode {
   marks?: Array<{ type: string; attrs?: Record<string, any> }>;
 }
 
+export type StructuredDiffEngine = 'legacy' | 'enhanced';
+
+export interface StructuredDiffOptions {
+  engine?: StructuredDiffEngine;
+  ignoreAttrs?: string[];
+  nodePreviewSerializer?: (node: ProseMirrorNode) => string | null | undefined;
+}
+
+const LEGACY_INLINE_CONTAINER_TYPES = new Set(['paragraph', 'heading']);
+const NON_INLINE_LEAF_CONTAINER_TYPES = new Set([
+  'doc',
+  'table',
+  'tableRow',
+  'table_row',
+  'tableCell',
+  'table_cell',
+  'tableHeader',
+  'table_header',
+  'orderedList',
+  'ordered_list',
+  'bulletList',
+  'bullet_list',
+  'taskList',
+  'task_list',
+  'taskItem',
+  'task_item',
+  'listItem',
+  'list_item',
+  'blockquote',
+  'details',
+  'detailsContent',
+  'details_content',
+  'codeBlock',
+  'code_block',
+  'alert',
+  'horizontalRule',
+  'horizontal_rule',
+  'flow',
+  'flipGrid',
+  'flip_grid',
+  'flipGridColumn',
+  'flip_grid_column',
+  'yamlFrontmatter',
+  'yaml_frontmatter',
+]);
+const BLOCKISH_CHILD_NODE_TYPES = new Set([
+  'image',
+  'video',
+  'audio',
+  'iframe',
+  'flow',
+  'blockAttachment',
+  'blockLink',
+  'blockMath',
+  'table',
+  'horizontalRule',
+  'horizontal_rule',
+  'codeBlock',
+  'code_block',
+  'details',
+  'detailsContent',
+  'details_content',
+  'orderedList',
+  'ordered_list',
+  'bulletList',
+  'bullet_list',
+  'taskList',
+  'task_list',
+  'taskItem',
+  'task_item',
+  'listItem',
+  'list_item',
+  'blockquote',
+  'alert',
+  'flipGrid',
+  'flip_grid',
+  'flipGridColumn',
+  'flip_grid_column',
+  'yamlFrontmatter',
+  'yaml_frontmatter',
+]);
+
 /**
  * 将HTML转换为ProseMirror文档结构
  * @param {string} html - HTML字符串
@@ -54,14 +137,24 @@ export function parseHtmlToDoc(html: string, extensions: Extensions): any {
   return generateJSON(html, extensions);
 }
 
-function haveSameMarks(a?: Array<{ type: string; attrs?: Record<string, any> }>, b?: Array<{ type: string; attrs?: Record<string, any> }>): boolean {
+function serializeMark(mark: { type: string; attrs?: Record<string, any> }, options?: StructuredDiffOptions): string {
+  return JSON.stringify({
+    type: mark.type,
+    attrs: getFilteredAttrs(mark.attrs, options)
+  });
+}
+
+function haveSameMarks(
+  a?: Array<{ type: string; attrs?: Record<string, any> }>,
+  b?: Array<{ type: string; attrs?: Record<string, any> }>,
+  options?: StructuredDiffOptions
+): boolean {
   const arrA = a || [];
   const arrB = b || [];
   if (arrA.length !== arrB.length) return false;
-  const serialize = (m: { type: string; attrs?: Record<string, any> }) => `${m.type}:${JSON.stringify(m.attrs || {})}`;
-  const setA = new Set(arrA.map(serialize));
+  const setA = new Set(arrA.map(mark => serializeMark(mark, options)));
   for (const m of arrB) {
-    if (!setA.has(serialize(m))) return false;
+    if (!setA.has(serializeMark(m, options))) return false;
   }
   return true;
 }
@@ -73,7 +166,108 @@ function haveSameMarks(a?: Array<{ type: string; attrs?: Record<string, any> }>,
  * @param {Array} path - 当前节点路径
  * @returns {Array} 差异数组
  */
-function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode | undefined, path: number[] = []): DiffItem[] {
+function isIgnoredAttr(key: string, options?: StructuredDiffOptions): boolean {
+  return !!options?.ignoreAttrs?.includes(key);
+}
+
+function getFilteredAttrs(attrs: Record<string, any> | undefined, options?: StructuredDiffOptions): Record<string, any> {
+  const source = attrs || {};
+
+  if (!options?.ignoreAttrs?.length) {
+    return source;
+  }
+
+  return Object.fromEntries(
+    Object.entries(source).filter(([key]) => !isIgnoredAttr(key, options))
+  );
+}
+
+function areAttrsEqual(
+  attrsA: Record<string, any> | undefined,
+  attrsB: Record<string, any> | undefined,
+  options?: StructuredDiffOptions
+): boolean {
+  return JSON.stringify(getFilteredAttrs(attrsA, options)) === JSON.stringify(getFilteredAttrs(attrsB, options));
+}
+
+function getStructuredDiffEngine(options?: StructuredDiffOptions): StructuredDiffEngine {
+  return options?.engine ?? 'legacy';
+}
+
+function getNodeSignatureForAlign(node: ProseMirrorNode | undefined, options?: StructuredDiffOptions): string {
+  if (!node) {
+    return '';
+  }
+
+  if (node.type === 'text') {
+    return JSON.stringify({
+      type: node.type,
+      text: node.text || '',
+      marks: (node.marks || []).map(mark => serializeMark(mark, options))
+    });
+  }
+
+  return JSON.stringify({
+    type: node.type,
+    attrs: getFilteredAttrs(node.attrs, options),
+    content: (node.content || []).map(child => getNodeSignatureForAlign(child, options))
+  });
+}
+
+function createAlignPredicate<T>(
+  a: T[],
+  b: T[],
+  getNode: (item: T) => ProseMirrorNode | undefined,
+  options?: StructuredDiffOptions
+): (x: T, y: T) => boolean {
+  if (getStructuredDiffEngine(options) !== 'enhanced') {
+    return (x, y) => nodesEqualForAlign(getNode(x), getNode(y), options);
+  }
+
+  const countSignatures = (items: T[]) => {
+    const counts = new Map<string, number>();
+
+    items.forEach(item => {
+      const signature = getNodeSignatureForAlign(getNode(item), options);
+
+      if (!signature) {
+        return;
+      }
+
+      counts.set(signature, (counts.get(signature) || 0) + 1);
+    });
+
+    return counts;
+  };
+
+  const countsA = countSignatures(a);
+  const countsB = countSignatures(b);
+  const uniqueSharedSignatures = new Set(
+    Array.from(countsA.keys()).filter(signature => countsA.get(signature) === 1 && countsB.get(signature) === 1)
+  );
+
+  return (x, y) => {
+    const nodeX = getNode(x);
+    const nodeY = getNode(y);
+    const signatureX = getNodeSignatureForAlign(nodeX, options);
+    const signatureY = getNodeSignatureForAlign(nodeY, options);
+    const isXUnique = uniqueSharedSignatures.has(signatureX);
+    const isYUnique = uniqueSharedSignatures.has(signatureY);
+
+    if (isXUnique || isYUnique) {
+      return isXUnique && isYUnique && signatureX === signatureY;
+    }
+
+    return nodesEqualForAlign(nodeX, nodeY, options);
+  };
+}
+
+function compareNodes(
+  nodeA: ProseMirrorNode | undefined,
+  nodeB: ProseMirrorNode | undefined,
+  path: number[] = [],
+  options?: StructuredDiffOptions
+): DiffItem[] {
   const diffs: DiffItem[] = [];
 
   // 如果节点类型不同，标记整个节点为变更
@@ -143,7 +337,7 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
       });
     }
     // 文本相等或不相等时都可检查 marks 差异（粗粒度：节点级）
-    if (!haveSameMarks(nodeA.marks, nodeB.marks)) {
+    if (!haveSameMarks(nodeA.marks, nodeB.marks, options)) {
       diffs.push({
         type: 'modify',
         path: [...path],
@@ -158,11 +352,11 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
   }
 
   // 优先：段落/标题等内联容器执行字符级 diff 和 marks 区间对比
-  if (nodeA && nodeB && isInlineContainer(nodeA) && isInlineContainer(nodeB)) {
+  if (nodeA && nodeB && isInlineContainer(nodeA, options) && isInlineContainer(nodeB, options)) {
     // 文本与 marks 的字符级 diff
-    diffs.push(...compareInlineContainer(nodeA, nodeB, path));
+    diffs.push(...compareInlineContainer(nodeA, nodeB, path, options));
     // 非文本内联节点（如行内数学、行内公式等）的结构化对比
-    diffs.push(...compareInlineContainerChildren(nodeA, nodeB, path));
+    diffs.push(...compareInlineContainerChildren(nodeA, nodeB, path, options));
     return diffs;
   }
 
@@ -172,6 +366,10 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
   const allAttrKeys = new Set([...Object.keys(attrsA), ...Object.keys(attrsB)]);
 
   for (const key of Array.from(allAttrKeys)) {
+    if (isIgnoredAttr(key, options)) {
+      continue;
+    }
+
     if (attrsA[key] !== attrsB[key]) {
       diffs.push({
         type: 'modify',
@@ -188,7 +386,7 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
   // 使用 LCS 对齐子节点，减少错配
   const contentA = nodeA?.content || [];
   const contentB = nodeB?.content || [];
-  const pairs = lcsAlign(contentA, contentB, nodesEqualForAlign);
+  const pairs = lcsAlign(contentA, contentB, createAlignPredicate(contentA, contentB, node => node, options));
 
   let ai = 0;
   let bi = 0;
@@ -216,7 +414,7 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
     // 匹配上的成对递归，路径以新文档索引为准
     const childA = contentA[i];
     const childB = contentB[j];
-    diffs.push(...compareNodes(childA, childB, [...path, j]));
+    diffs.push(...compareNodes(childA, childB, [...path, j], options));
     ai = i + 1;
     bi = j + 1;
   }
@@ -243,8 +441,38 @@ function compareNodes(nodeA: ProseMirrorNode | undefined, nodeB: ProseMirrorNode
   return diffs;
 }
 
-function isInlineContainer(node: ProseMirrorNode): boolean {
-  return node.type === 'paragraph' || node.type === 'heading';
+function isInlineLikeChildNode(node: ProseMirrorNode): boolean {
+  if (node.type === 'text') {
+    return true;
+  }
+
+  if (BLOCKISH_CHILD_NODE_TYPES.has(node.type)) {
+    return false;
+  }
+
+  return !node.content?.length;
+}
+
+function isInlineLeafContainer(node: ProseMirrorNode): boolean {
+  if (NON_INLINE_LEAF_CONTAINER_TYPES.has(node.type)) {
+    return false;
+  }
+
+  const content = node.content || [];
+
+  if (content.length === 0) {
+    return false;
+  }
+
+  return content.every(isInlineLikeChildNode);
+}
+
+function isInlineContainer(node: ProseMirrorNode, options?: StructuredDiffOptions): boolean {
+  if (getStructuredDiffEngine(options) === 'legacy') {
+    return LEGACY_INLINE_CONTAINER_TYPES.has(node.type);
+  }
+
+  return isInlineLeafContainer(node);
 }
 
 function extractInlineTextAndMarks(node: ProseMirrorNode): { text: string; marksMap: Array<Array<{ type: string; attrs?: Record<string, any> }>> } {
@@ -263,7 +491,12 @@ function extractInlineTextAndMarks(node: ProseMirrorNode): { text: string; marks
   return { text: resultChars.join(''), marksMap };
 }
 
-function compareInlineContainer(nodeA: ProseMirrorNode, nodeB: ProseMirrorNode, path: number[]): DiffItem[] {
+function compareInlineContainer(
+  nodeA: ProseMirrorNode,
+  nodeB: ProseMirrorNode,
+  path: number[],
+  options?: StructuredDiffOptions
+): DiffItem[] {
   const diffs: DiffItem[] = [];
   const { text: oldText, marksMap: oldMarks } = extractInlineTextAndMarks(nodeA);
   const { text: newText, marksMap: newMarks } = extractInlineTextAndMarks(nodeB);
@@ -298,7 +531,7 @@ function compareInlineContainer(nodeA: ProseMirrorNode, nodeB: ProseMirrorNode, 
       for (let i = 0; i < len; i++) {
         const oldIdx = oldOffset + i;
         const newIdx = newOffset + i;
-        const same = haveSameMarks(oldMarks[oldIdx] || [], newMarks[newIdx] || []);
+        const same = haveSameMarks(oldMarks[oldIdx] || [], newMarks[newIdx] || [], options);
         if (!same) {
           if (runStart === null) runStart = i;
         } else if (runStart !== null) {
@@ -338,30 +571,45 @@ function compareInlineContainer(nodeA: ProseMirrorNode, nodeB: ProseMirrorNode, 
   return diffs;
 }
 
-function nodesEqualForAlign(a?: ProseMirrorNode, b?: ProseMirrorNode): boolean {
+function nodesEqualForAlign(a?: ProseMirrorNode, b?: ProseMirrorNode, options?: StructuredDiffOptions): boolean {
   if (!a || !b) return false;
   if (a.type !== b.type) return false;
   // 对部分结构节点使用关键属性辅助匹配
   if (a.type === 'heading') {
+    if (isIgnoredAttr('level', options)) {
+      return true;
+    }
+
     return (a.attrs?.level ?? null) === (b.attrs?.level ?? null);
   }
   if (a.type === 'codeBlock' || a.type === 'code_block') {
+    if (isIgnoredAttr('language', options) || isIgnoredAttr('lang', options)) {
+      return true;
+    }
+
     const langA = a.attrs?.language ?? a.attrs?.lang ?? null;
     const langB = b.attrs?.language ?? b.attrs?.lang ?? null;
     return langA === langB;
   }
   if (a.type === 'table_cell' || a.type === 'tableHeader' || a.type === 'table_header') {
+    const compareColspan = !isIgnoredAttr('colspan', options);
+    const compareRowspan = !isIgnoredAttr('rowspan', options);
     const colspanA = a.attrs?.colspan ?? 1;
     const colspanB = b.attrs?.colspan ?? 1;
     const rowspanA = a.attrs?.rowspan ?? 1;
     const rowspanB = b.attrs?.rowspan ?? 1;
-    return colspanA === colspanB && rowspanA === rowspanB;
+    return (!compareColspan || colspanA === colspanB) && (!compareRowspan || rowspanA === rowspanB);
   }
   // 默认仅按类型
   return true;
 }
 
-function compareInlineContainerChildren(nodeA: ProseMirrorNode, nodeB: ProseMirrorNode, path: number[]): DiffItem[] {
+function compareInlineContainerChildren(
+  nodeA: ProseMirrorNode,
+  nodeB: ProseMirrorNode,
+  path: number[],
+  options?: StructuredDiffOptions
+): DiffItem[] {
   const diffs: DiffItem[] = [];
   const aList = (nodeA.content || []).map((n, idx) => ({ n, idx })).filter(x => x.n.type !== 'text');
   const bList = (nodeB.content || []).map((n, idx) => ({ n, idx })).filter(x => x.n.type !== 'text');
@@ -372,7 +620,13 @@ function compareInlineContainerChildren(nodeA: ProseMirrorNode, nodeB: ProseMirr
     return x.n.type === y.n.type;
   };
 
-  const pairs = lcsAlign(aList, bList, equals);
+  const pairs = lcsAlign(
+    aList,
+    bList,
+    getStructuredDiffEngine(options) === 'enhanced'
+      ? createAlignPredicate(aList, bList, item => item.n, options)
+      : equals
+  );
 
   let ai = 0, bi = 0;
   for (const [i, j] of pairs) {
@@ -390,16 +644,20 @@ function compareInlineContainerChildren(nodeA: ProseMirrorNode, nodeB: ProseMirr
       bi++;
     }
     // modify：同类型节点进行属性对比，路径指向新文档该内联节点索引
-    const aItem = aList[i];
-    const bItem = bList[j];
-    if (aItem && bItem) {
+      const aItem = aList[i];
+      const bItem = bList[j];
+      if (aItem && bItem) {
       const oldAttrs = aItem.n.attrs || {};
       const newAttrs = bItem.n.attrs || {};
-      if (JSON.stringify(oldAttrs) !== JSON.stringify(newAttrs)) {
+      if (!areAttrsEqual(oldAttrs, newAttrs, options)) {
         diffs.push({
           type: 'modify',
           path: [...path, bItem.idx],
-          attrChange: { key: 'attrs', oldValue: oldAttrs, newValue: newAttrs }
+          attrChange: {
+            key: 'attrs',
+            oldValue: getFilteredAttrs(oldAttrs, options),
+            newValue: getFilteredAttrs(newAttrs, options)
+          }
         });
       }
     }
@@ -451,11 +709,16 @@ function lcsAlign<T>(a: T[], b: T[], equals: (x: T, y: T) => boolean): Array<[nu
  * @param {Array} extensions - Tiptap扩展数组
  * @returns {Object} 包含差异信息的对象
  */
-export function compareDocuments(oldHtml: string, newHtml: string, extensions: Extensions): DocumentComparison {
+export function compareDocuments(
+  oldHtml: string,
+  newHtml: string,
+  extensions: Extensions,
+  options?: StructuredDiffOptions
+): DocumentComparison {
   const docA = parseHtmlToDoc(oldHtml, extensions);
   const docB = parseHtmlToDoc(newHtml, extensions);
 
-  const diffs = compareNodes(docA, docB);
+  const diffs = compareNodes(docA, docB, [], options);
 
   return {
     oldDoc: docA,

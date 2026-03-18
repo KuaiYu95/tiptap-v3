@@ -1,10 +1,18 @@
-import { Editor, Extension } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
+import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { DecorationSet } from '@tiptap/pm/view';
 import { createDecorationsFromDiffs, createEmptyDecorationSet } from '../../util/decorations';
 import { compareDocuments, DiffItem } from '../../util/structuredDiff';
+import type { StructuredDiffOptions } from '../../util/structuredDiff';
 
 const diffPluginKey = new PluginKey('structuredDiff');
+
+function createHideDiffTransaction(tr: any) {
+  return tr.setMeta(diffPluginKey, {
+    type: 'hideDiff'
+  });
+}
 
 class DiffPluginState {
   decorations: DecorationSet;
@@ -66,8 +74,16 @@ declare module '@tiptap/core' {
   }
 }
 
-export const StructuredDiffExtension = Extension.create({
+export const StructuredDiffExtension = Extension.create<StructuredDiffOptions>({
   name: 'structuredDiff',
+
+  addOptions() {
+    return {
+      engine: 'legacy',
+      ignoreAttrs: [],
+      nodePreviewSerializer: undefined,
+    };
+  },
 
   addProseMirrorPlugins() {
     return [
@@ -88,17 +104,22 @@ export const StructuredDiffExtension = Extension.create({
   },
 
   addCommands() {
+    const diffOptions = this.options;
+
     return {
       showStructuredDiff: (oldHtml, newHtml) => ({ tr, state, dispatch, editor }) => {
         try {
           const extensions = editor.extensionManager.extensions
-          const comparison = compareDocuments(oldHtml, newHtml, extensions);
+          const comparison = compareDocuments(oldHtml, newHtml, extensions, diffOptions);
 
           if (!comparison.hasChanges) {
+            if (dispatch) {
+              dispatch(createHideDiffTransaction(tr));
+            }
             return false;
           }
 
-          const decorations = createDecorationsFromDiffs(comparison.diffs, state.doc);
+          const decorations = createDecorationsFromDiffs(comparison.diffs, state.doc, diffOptions);
 
           const newTr = tr.setMeta(diffPluginKey, {
             type: 'showDiff',
@@ -116,11 +137,9 @@ export const StructuredDiffExtension = Extension.create({
           return false;
         }
       },
-      hideStructuredDiff: () => ({ tr, state, dispatch }) => {
+      hideStructuredDiff: () => ({ tr, dispatch }) => {
         try {
-          const newTr = tr.setMeta(diffPluginKey, {
-            type: 'hideDiff'
-          });
+          const newTr = createHideDiffTransaction(tr);
           if (dispatch) dispatch(newTr);
           return true;
         } catch (error) {
