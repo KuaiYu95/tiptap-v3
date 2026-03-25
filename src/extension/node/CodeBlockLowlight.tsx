@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { all, createLowlight } from 'lowlight';
 import CodeBlockView from "../component/CodeBlock";
@@ -52,6 +53,39 @@ const CustomCodeBlock = CodeBlockLowlight.configure({
   },
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView)
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('codeBlockCopyPlainText'),
+        view(editorView) {
+          const handler = (event: ClipboardEvent) => {
+            const { state } = editorView;
+            const { selection } = state;
+            const { $from, $to, empty } = selection;
+            if (empty) return;
+            let node = $from.node($from.depth);
+            if (node.type.name !== 'codeBlock') {
+              node = $from.node($from.depth - 1);
+            }
+            if (!node || node.type.name !== 'codeBlock') return;
+            const $toNode = $to.node($to.depth) === node || $to.node($to.depth - 1) === node;
+            if (!$toNode) return;
+            const selectedText = state.doc.textBetween($from.pos, $to.pos, '\n');
+            event.clipboardData?.clearData();
+            event.clipboardData?.setData('text/plain', selectedText);
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          };
+          editorView.dom.addEventListener('copy', handler, true);
+          return {
+            destroy() {
+              editorView.dom.removeEventListener('copy', handler, true);
+            },
+          };
+        },
+      }),
+    ];
   },
 })
 
