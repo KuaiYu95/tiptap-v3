@@ -242,6 +242,7 @@ export const TableExtendRowColumnButtons: React.FC<
 
   // 检查是否为嵌套表格，如果是则不显示扩展按钮
   if (editor && state.blockPos !== undefined) {
+    if (state.blockPos < 0 || state.blockPos > editor.state.doc.content.size) return null
     const $pos = editor.state.doc.resolve(state.blockPos);
     for (let d = $pos.depth - 1; d >= 0; d--) {
       const node = $pos.node(d);
